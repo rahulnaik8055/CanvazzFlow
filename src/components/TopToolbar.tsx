@@ -1,22 +1,11 @@
 "use client";
 
 import React from "react";
-import {
-  Move,
-  MousePointer,
-  Square,
-  Circle as CircleIcon,
-  Type,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Frame as FrameIcon,
-} from "lucide-react";
+import { Move, MousePointer, ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
 interface TopToolbarProps {
   tool: "select" | "pan";
   setTool: (tool: "select" | "pan") => void;
-  addShape: (type: "rect" | "circle" | "text" | "frame") => void;
   undo: () => void;
   redo: () => void;
   zoomIn: () => void;
@@ -30,7 +19,6 @@ interface TopToolbarProps {
 export default function TopToolbar({
   tool,
   setTool,
-  addShape,
   undo,
   redo,
   zoomIn,
@@ -45,7 +33,6 @@ export default function TopToolbar({
       <div className="flex items-center gap-3">
         <h1 className="text-xl font-bold text-gray-900 mr-6">Canvas Editor</h1>
 
-        {/* Tool Selection */}
         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
           <button
             onClick={() => setTool("select")}
@@ -68,42 +55,6 @@ export default function TopToolbar({
           >
             <Move size={16} />
             <span className="text-sm font-medium">Pan</span>
-          </button>
-        </div>
-
-        {/* Shape Tools */}
-        <div className="flex items-center gap-2 ml-4">
-          <button
-            onClick={() => addShape("rect")}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            title="Add Rectangle"
-          >
-            <Square size={16} />
-            <span className="text-sm">Rectangle</span>
-          </button>
-          <button
-            onClick={() => addShape("circle")}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            title="Add Circle"
-          >
-            <CircleIcon size={16} />
-            <span className="text-sm">Circle</span>
-          </button>
-          <button
-            onClick={() => addShape("text")}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            title="Add Text"
-          >
-            <Type size={16} />
-            <span className="text-sm">Text</span>
-          </button>
-          <button
-            onClick={() => addShape("frame")}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            title="Add Frame"
-          >
-            <FrameIcon size={16} />
-            <span className="text-sm">Frame</span>
           </button>
         </div>
       </div>

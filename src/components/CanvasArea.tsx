@@ -28,7 +28,7 @@ interface CanvasAreaProps {
   zoomOut: () => void;
   resetView: () => void;
   stageRef: React.RefObject<Konva.Stage>;
-  transformerRef: React.RefObject<Konva.Transformer>;
+  transformerRef: React.RefObject<Konva.Transformer | null>;
   handleSelect: (id: string | null) => void;
   handleDrag: (id: string, e: Konva.KonvaEventObject<DragEvent>) => void;
   handleTransform: (id: string, e: Konva.KonvaEventObject<Event>) => void;

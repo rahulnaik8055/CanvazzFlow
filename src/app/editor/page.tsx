@@ -180,7 +180,6 @@ export default function ProfessionalCanvasEditor() {
       <TopToolbar
         tool={tool}
         setTool={setTool}
-        addShape={addShape}
         undo={() => historyUndo(setNodes, setSelectedId)}
         redo={() => historyRedo(setNodes, setSelectedId)}
         zoomIn={zoomIn}

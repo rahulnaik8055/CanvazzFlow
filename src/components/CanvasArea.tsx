@@ -27,8 +27,8 @@ interface CanvasAreaProps {
   zoomIn: () => void;
   zoomOut: () => void;
   resetView: () => void;
-  stageRef: React.RefObject<Konva.Stage | null>;
-  transformerRef: React.RefObject<Konva.Transformer | null>;
+  stageRef: React.RefObject<Konva.Stage>;
+  transformerRef: React.RefObject<Konva.Transformer>;
   handleSelect: (id: string | null) => void;
   handleDrag: (id: string, e: Konva.KonvaEventObject<DragEvent>) => void;
   handleTransform: (id: string, e: Konva.KonvaEventObject<Event>) => void;
@@ -100,7 +100,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
       <Stage
         width={props.canvasSize.width}
         height={props.canvasSize.height}
-        className="bg-white rounded-lg shadow-sm border border-gray-200"
+        className="bg-white rounded-lg shadow-sm border border-gray-200 "
         scaleX={props.stageScale}
         scaleY={props.stageScale}
         x={props.stagePosition.x}
@@ -163,6 +163,17 @@ export default function CanvasArea(props: CanvasAreaProps) {
                   fontFamily={node.fontFamily}
                   width={node.width}
                   height={node.height}
+                />
+              );
+            }
+            if (node.type === "frame") {
+              return (
+                <Rect
+                  key={node.id}
+                  {...commonProps}
+                  width={node.width}
+                  height={node.height}
+                  dash={node.strokeStyle === "dashed" ? [5, 5] : undefined}
                 />
               );
             }

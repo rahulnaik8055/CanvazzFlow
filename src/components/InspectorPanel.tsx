@@ -1,11 +1,12 @@
-// /app/components/InspectorPanel.tsx
 "use client";
 
 import React from "react";
 import { MousePointer, Copy, Trash2 } from "lucide-react";
-
 import { Node } from "@/types/CanvasTypes";
-import { MIN_SIZE } from "@/constants/CanvasConstants";
+import {
+  FRAME_DEFAULT_STROKE_STYLE,
+  MIN_SIZE,
+} from "@/constants/CanvasConstants";
 
 interface InspectorPanelProps {
   selectedNode: Node | null;
@@ -177,30 +178,27 @@ export default function InspectorPanel({
         )}
 
         {/* Fill Color */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fill Color
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="color"
-              value={selectedNode.fill}
+        {selectedNode.type === "frame" && (
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">
+              Stroke Style
+            </label>
+            <select
+              value={selectedNode.strokeStyle || "solid"}
               onChange={(e) =>
-                updateNodeProperty(selectedNode.id, "fill", e.target.value)
+                updateNodeProperty(
+                  selectedNode.id,
+                  "strokeStyle",
+                  e.target.value as "solid" | "dashed"
+                )
               }
-              className="w-16 h-10 border border-gray-300 rounded-lg cursor-pointer"
-            />
-            <input
-              type="text"
-              value={selectedNode.fill}
-              onChange={(e) =>
-                updateNodeProperty(selectedNode.id, "fill", e.target.value)
-              }
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-              placeholder="#000000"
-            />
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="solid">Solid</option>
+              <option value="dashed">Dashed</option>
+            </select>
           </div>
-        </div>
+        )}
 
         {/* Stroke */}
         <div>
@@ -244,6 +242,27 @@ export default function InspectorPanel({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+            {selectedNode.type === "frame" && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">
+                  Stroke Style
+                </label>
+                <select
+                  value={selectedNode.strokeStyle || "solid"}
+                  onChange={(e) =>
+                    updateNodeProperty(
+                      selectedNode.id,
+                      "strokeStyle",
+                      e.target.value as "solid" | "dashed"
+                    )
+                  }
+                  className="w-full px-3 py-2 border border-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="solid">Solid</option>
+                  <option value="dashed">Dashed</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
 

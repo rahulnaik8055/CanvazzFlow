@@ -4,17 +4,17 @@
 import React, { useState, useRef, useEffect } from "react";
 import Konva from "konva";
 
-import LoadingOverlay from "@/components/canvas/LoadingOverlay";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 import { Node } from "@/types/CanvasTypes";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { useShapeActions } from "@/hooks/useShapeActions";
 import { useCanvasInteractions } from "@/hooks/useCanvasInteractions";
 import { useViewControls } from "@/hooks/useViewControl";
-import InspectorPanel from "@/components/canvas/InspectorPanel";
-import CanvasArea from "@/components/canvas/CanvasArea";
-import LeftSidebar from "@/components/canvas/LeftSidebar";
-import TopToolbar from "@/components/canvas/TopToolbar";
+import InspectorPanel from "@/components/InspectorPanel";
+import CanvasArea from "@/components/CanvasArea";
+import LeftSidebar from "@/components/LeftSidebar";
+import TopToolbar from "@/components/TopToolbar";
 
 export default function ProfessionalCanvasEditor() {
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -49,6 +49,7 @@ export default function ProfessionalCanvasEditor() {
     historyStep,
     history,
   } = useCanvasHistory(nodes);
+
   const {
     addShape,
     duplicateShape: actionsDuplicate,
@@ -65,10 +66,12 @@ export default function ProfessionalCanvasEditor() {
     setTool,
     setError
   );
+
   const { zoomIn, zoomOut, resetView } = useViewControls(
     setStageScale,
     setStagePosition
   );
+
   const {
     handleSelect,
     handleDrag,

@@ -1,4 +1,3 @@
-// /app/components/TopToolbar.tsx
 "use client";
 
 import React from "react";
@@ -11,12 +10,13 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Frame as FrameIcon,
 } from "lucide-react";
 
 interface TopToolbarProps {
   tool: "select" | "pan";
   setTool: (tool: "select" | "pan") => void;
-  addShape: (type: "rect" | "circle" | "text") => void;
+  addShape: (type: "rect" | "circle" | "text" | "frame") => void;
   undo: () => void;
   redo: () => void;
   zoomIn: () => void;
@@ -96,6 +96,14 @@ export default function TopToolbar({
           >
             <Type size={16} />
             <span className="text-sm">Text</span>
+          </button>
+          <button
+            onClick={() => addShape("frame")}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            title="Add Frame"
+          >
+            <FrameIcon size={16} />
+            <span className="text-sm">Frame</span>
           </button>
         </div>
       </div>

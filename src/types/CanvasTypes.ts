@@ -1,7 +1,7 @@
 // /app/types/canvasTypes.ts
 export interface Node {
   id: string;
-  type: "rect" | "circle" | "text";
+  type: "rect" | "circle" | "text" | "frame";
   x: number;
   y: number;
   width: number;
@@ -16,4 +16,5 @@ export interface Node {
   fontSize: number;
   fontFamily: string;
   zIndex: number;
+  strokeStyle?: "solid" | "dashed";
 }

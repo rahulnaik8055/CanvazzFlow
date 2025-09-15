@@ -1,10 +1,10 @@
-// /app/components/LeftSidebar.tsx
 "use client";
 
 import React from "react";
+import { Frame as FrameIcon } from "lucide-react";
 
 interface LeftSidebarProps {
-  addShape: (type: "rect" | "circle" | "text") => void;
+  addShape: (type: "rect" | "circle" | "text" | "frame") => void;
   showGrid: boolean;
   setShowGrid: (show: boolean) => void;
   error: string | null;
@@ -43,6 +43,13 @@ export default function LeftSidebar({
               T
             </div>
             <span className="text-sm font-medium text-gray-700">Text</span>
+          </button>
+          <button
+            onClick={() => addShape("frame")}
+            className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-blue-200 transition-all group"
+          >
+            <div className="w-8 h-6 border-2 border-blue-500 group-hover:border-blue-600"></div>
+            <span className="text-sm font-medium text-gray-700">Frame</span>
           </button>
         </div>
       </div>

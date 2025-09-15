@@ -11,12 +11,25 @@ import {
   Line,
 } from "react-konva";
 import Konva from "konva";
-import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
+import {
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Frame,
+  Star,
+  Minus,
+  Diamond,
+  Layout,
+  Type,
+  Square,
+  Circle as CircleIcon,
+} from "lucide-react";
 
 import { Node } from "@/types/CanvasTypes";
 import { GRID_SIZE, MIN_SIZE } from "@/constants/CanvasConstants";
 
 interface CanvasAreaProps {
+  addShape: (type: "rect" | "circle" | "text" | "frame") => void;
   nodes: Node[];
   canvasSize: { width: number; height: number };
   stageScale: number;
@@ -40,6 +53,8 @@ interface CanvasAreaProps {
 }
 
 export default function CanvasArea(props: CanvasAreaProps) {
+  const { addShape } = props;
+
   const GridLayerComponent = useMemo(() => {
     if (!props.showGrid) return null;
 
@@ -224,6 +239,66 @@ export default function CanvasArea(props: CanvasAreaProps) {
         >
           <RotateCcw size={18} />
         </button>
+      </div>
+
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-lg p-2">
+        <div className="flex items-center">
+          {/* Rectangle */}
+          <button
+            onClick={() => addShape("rect")}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+          >
+            <Square className="w-5 h-5 text-gray-700" />
+          </button>
+
+          {/* Circle */}
+          <button
+            onClick={() => addShape("circle")}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+          >
+            <CircleIcon className="w-5 h-5 text-gray-700" />
+          </button>
+
+          {/* Text */}
+          <button
+            onClick={() => addShape("text")}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+          >
+            <Type className="w-5 h-5 text-gray-700" />
+          </button>
+
+          {/* Frame */}
+          <button
+            onClick={() => addShape("frame")}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+          >
+            <Frame className="w-5 h-5 text-gray-700" />
+          </button>
+
+          {/* Diamond */}
+          <button
+            // onClick={() => addShape("diamond")}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+          >
+            <Diamond className="w-5 h-5 text-gray-700" />
+          </button>
+
+          {/* Line */}
+          <button
+            // onClick={() => addShape("line")}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+          >
+            <Minus className="w-5 h-5 text-gray-700" />
+          </button>
+
+          {/* Star */}
+          <button
+            // onClick={() => addShape("star")}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+          >
+            <Star className="w-5 h-5 text-gray-700" />
+          </button>
+        </div>
       </div>
     </div>
   );

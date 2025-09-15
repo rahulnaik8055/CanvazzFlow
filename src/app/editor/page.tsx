@@ -191,13 +191,13 @@ export default function ProfessionalCanvasEditor() {
       />
 
       <LeftSidebar
-        addShape={addShape}
         showGrid={showGrid}
         setShowGrid={setShowGrid}
         error={error}
       />
 
       <CanvasArea
+        addShape={addShape}
         nodes={nodes}
         canvasSize={canvasSize}
         stageScale={stageScale}

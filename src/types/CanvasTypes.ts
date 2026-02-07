@@ -1,7 +1,6 @@
-// /app/types/canvasTypes.ts
 export interface Node {
   id: string;
-  type: "rect" | "circle" | "text" | "frame";
+  type: "rect" | "circle" | "text" | "frame" | "star" | "diamond" | "image";
   x: number;
   y: number;
   width: number;
@@ -17,4 +16,6 @@ export interface Node {
   fontFamily: string;
   zIndex: number;
   strokeStyle?: "solid" | "dashed";
+  imageUrl?: string;
+  points?: number[]; // For line shapes
 }

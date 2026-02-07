@@ -15,9 +15,8 @@ export default function LeftSidebar({
   error,
 }: LeftSidebarProps) {
   return (
-    <div className="w-64 bg-white border-r border-gray-200 shadow-sm p-4 flex flex-col gap-4 mt-14 z-10">
+    <div className="w-64 bg-white border-r border-gray-200 shadow-sm p-4 flex flex-col ju gap-4 mt-14 z-10">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Canvas</h2>
         <div className="space-y-2">
           <label className="flex items-center gap-2">
             <input

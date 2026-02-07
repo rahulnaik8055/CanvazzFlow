@@ -9,6 +9,8 @@ import {
   Text,
   Transformer,
   Line,
+  Image,
+  Star,
 } from "react-konva";
 import Konva from "konva";
 import {
@@ -16,20 +18,24 @@ import {
   ZoomOut,
   RotateCcw,
   Frame,
-  Star,
+  Star as StarIcon,
   Minus,
   Diamond,
   Layout,
   Type,
   Square,
   Circle as CircleIcon,
+  ImageIcon,
 } from "lucide-react";
 
 import { Node } from "@/types/CanvasTypes";
 import { GRID_SIZE, MIN_SIZE } from "@/constants/CanvasConstants";
 
 interface CanvasAreaProps {
-  addShape: (type: "rect" | "circle" | "text" | "frame") => void;
+  addShape: (
+    type: "rect" | "circle" | "text" | "frame" | "image" | "star" | "diamond",
+    file?: File,
+  ) => void;
   nodes: Node[];
   canvasSize: { width: number; height: number };
   stageScale: number;
@@ -52,8 +58,35 @@ interface CanvasAreaProps {
   handleStageMouseUp: () => void;
 }
 
+const ImageNode = ({ node, commonProps }: { node: Node; commonProps: any }) => {
+  const [image, setImage] = React.useState<HTMLImageElement | null>(null);
+
+  React.useEffect(() => {
+    if (node.imageUrl) {
+      const img = new window.Image();
+      img.src = node.imageUrl;
+      img.onload = () => setImage(img);
+      img.onerror = () => console.error("Failed to load image:", node.imageUrl);
+    }
+  }, [node.imageUrl]);
+
+  if (!image) return null;
+
+  return (
+    <Image
+      key={node.id}
+      {...commonProps}
+      image={image}
+      width={node.width}
+      height={node.height}
+    />
+  );
+};
+
 export default function CanvasArea(props: CanvasAreaProps) {
   const { addShape } = props;
+
+  console.log("Rendering CanvasArea with nodes:", props.nodes);
 
   const GridLayerComponent = useMemo(() => {
     if (!props.showGrid) return null;
@@ -80,7 +113,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
           stroke="#e5e7eb"
           strokeWidth={0.5}
           opacity={0.8}
-        />
+        />,
       );
     }
 
@@ -98,7 +131,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
           stroke="#e5e7eb"
           strokeWidth={0.5}
           opacity={0.8}
-        />
+        />,
       );
     }
 
@@ -192,6 +225,50 @@ export default function CanvasArea(props: CanvasAreaProps) {
                 />
               );
             }
+            if (node.type === "star") {
+              return (
+                <Star
+                  key={node.id}
+                  {...commonProps}
+                  numPoints={5}
+                  innerRadius={node.width * 0.4}
+                  outerRadius={node.width * 0.6}
+                />
+              );
+            }
+            if (node.type === "diamond") {
+              const points = [
+                node.width / 2,
+                0,
+                node.width,
+                node.height / 2,
+                node.width / 2,
+                node.height,
+                0,
+                node.height / 2,
+              ];
+              return (
+                <Line
+                  key={node.id}
+                  {...commonProps}
+                  points={points}
+                  closed={true}
+                  fill={node.fill}
+                  stroke={node.stroke}
+                  strokeWidth={node.strokeWidth}
+                />
+              );
+            }
+
+            if (node.type === "image") {
+              return (
+                <ImageNode
+                  key={node.id}
+                  node={node}
+                  commonProps={commonProps}
+                />
+              );
+            }
             return null;
           })}
 
@@ -242,11 +319,12 @@ export default function CanvasArea(props: CanvasAreaProps) {
       </div>
 
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-lg p-2">
-        <div className="flex items-center">
+        <div className="flex items-center gap-1">
           {/* Rectangle */}
           <button
             onClick={() => addShape("rect")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Add Rectangle"
           >
             <Square className="w-5 h-5 text-gray-700" />
           </button>
@@ -254,7 +332,8 @@ export default function CanvasArea(props: CanvasAreaProps) {
           {/* Circle */}
           <button
             onClick={() => addShape("circle")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Add Circle"
           >
             <CircleIcon className="w-5 h-5 text-gray-700" />
           </button>
@@ -262,7 +341,8 @@ export default function CanvasArea(props: CanvasAreaProps) {
           {/* Text */}
           <button
             onClick={() => addShape("text")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Add Text"
           >
             <Type className="w-5 h-5 text-gray-700" />
           </button>
@@ -270,33 +350,48 @@ export default function CanvasArea(props: CanvasAreaProps) {
           {/* Frame */}
           <button
             onClick={() => addShape("frame")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Add Frame"
           >
             <Frame className="w-5 h-5 text-gray-700" />
           </button>
 
+          {/* Star */}
+          <button
+            onClick={() => addShape("star")}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Add Star"
+          >
+            <StarIcon className="w-5 h-5 text-gray-700" />
+          </button>
+
           {/* Diamond */}
           <button
-            // onClick={() => addShape("diamond")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+            onClick={() => addShape("diamond")}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Add Diamond"
           >
             <Diamond className="w-5 h-5 text-gray-700" />
           </button>
 
-          {/* Line */}
+          {/* Image */}
           <button
-            // onClick={() => addShape("line")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = (e: Event) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) {
+                  addShape("image", file);
+                }
+              };
+              input.click();
+            }}
+            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Add Image"
           >
-            <Minus className="w-5 h-5 text-gray-700" />
-          </button>
-
-          {/* Star */}
-          <button
-            // onClick={() => addShape("star")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100"
-          >
-            <Star className="w-5 h-5 text-gray-700" />
+            <ImageIcon className="w-5 h-5 text-gray-700" />
           </button>
         </div>
       </div>

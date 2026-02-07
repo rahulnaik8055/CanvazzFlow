@@ -16,21 +16,25 @@ export const useShapeActions = (
   stageScale: number,
   setSelectedId: (id: string | null) => void,
   setTool: (tool: "select" | "pan") => void,
-  setError: (error: string | null) => void
+  setError: (error: string | null) => void,
 ) => {
   const addShape = useCallback(
-    (type: "rect" | "circle" | "text" | "frame") => {
+    async (
+      type: "rect" | "circle" | "text" | "frame" | "star" | "diamond" | "image",
+      file?: File,
+    ) => {
       try {
         setError(null);
         const { x, y } = calculateShapeCenter(
           stagePosition,
           canvasSize,
-          stageScale
+          stageScale,
         );
         const maxZIndex =
           nodes.length > 0 ? Math.max(...nodes.map((n) => n.zIndex)) : 0;
 
         let newNode: Node;
+
         if (type === "frame") {
           newNode = {
             id: generateId(),
@@ -51,14 +55,51 @@ export const useShapeActions = (
             fontFamily: "Inter, system-ui, sans-serif",
             zIndex: maxZIndex + 1,
           };
+        } else if (type === "image" && file) {
+          const imageUrl = URL.createObjectURL(file);
+          await new Promise((resolve, reject) => {
+            const img = new window.Image();
+            img.src = imageUrl;
+            img.onload = resolve;
+            img.onerror = () => reject(new Error("Failed to load image"));
+          });
+          newNode = {
+            id: generateId(),
+            type,
+            x,
+            y,
+            width: 200,
+            height: 200,
+            radius: 0,
+            text: "",
+            fill: "transparent",
+            stroke: "#ffffff",
+            strokeWidth: 2,
+            rotation: 0,
+            opacity: 1,
+            fontSize: 16,
+            fontFamily: "Inter, system-ui, sans-serif",
+            zIndex: maxZIndex + 1,
+            imageUrl,
+          };
         } else {
           newNode = {
             id: generateId(),
             type,
             x,
             y,
-            width: type === "text" ? 120 : 120,
-            height: type === "text" ? 40 : 80,
+            width:
+              type === "text"
+                ? 120
+                : type === "star" || type === "diamond"
+                  ? 100
+                  : 120,
+            height:
+              type === "text"
+                ? 40
+                : type === "star" || type === "diamond"
+                  ? 100
+                  : 80,
             radius: type === "circle" ? 50 : 0,
             text: type === "text" ? "Sample Text" : "",
             fill: type === "text" ? "#1f2937" : "#3b82f6",
@@ -92,7 +133,7 @@ export const useShapeActions = (
       setSelectedId,
       setTool,
       setError,
-    ]
+    ],
   );
 
   const duplicateShape = useCallback(
@@ -116,7 +157,7 @@ export const useShapeActions = (
         }
       }
     },
-    [nodes, setNodes, saveToHistory, setSelectedId]
+    [nodes, setNodes, saveToHistory, setSelectedId],
   );
 
   const deleteShape = useCallback(
@@ -128,18 +169,18 @@ export const useShapeActions = (
         setSelectedId(null);
       }
     },
-    [nodes, setNodes, saveToHistory, setSelectedId]
+    [nodes, setNodes, saveToHistory, setSelectedId],
   );
 
   const updateNodeProperty = useCallback(
     (id: string, property: keyof Node, value: any) => {
       const newNodes = nodes.map((n) =>
-        n.id === id ? { ...n, [property]: value } : n
+        n.id === id ? { ...n, [property]: value } : n,
       );
       setNodes(newNodes);
       saveToHistory(newNodes);
     },
-    [nodes, setNodes, saveToHistory]
+    [nodes, setNodes, saveToHistory],
   );
 
   return { addShape, duplicateShape, deleteShape, updateNodeProperty };

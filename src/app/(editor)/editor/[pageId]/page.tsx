@@ -11,6 +11,7 @@ import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { useShapeActions } from "@/hooks/useShapeActions";
 import { useCanvasInteractions } from "@/hooks/useCanvasInteractions";
 import { useViewControls } from "@/hooks/useViewControl";
+import { useSyncEngine, Delta } from "@/hooks/useSyncEngine";
 import InspectorPanel from "@/components/InspectorPanel";
 import CanvasArea from "@/components/CanvasArea";
 import LeftSidebar from "@/components/LeftSidebar";
@@ -41,21 +42,56 @@ export default function EditorPage() {
   const [showGrid, setShowGrid] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState<boolean>(false);
-  const [saveStatus, setSaveStatus] = useState<"saved" | "unsaved" | "saving">(
-    "saved",
-  );
 
   const transformerRef = useRef<Konva.Transformer>(null);
   const stageRef = useRef<Konva.Stage>(null) as React.RefObject<Konva.Stage>;
-  const nodesRef = useRef<Node[]>([]); // always up to date nodes for beforeunload
+  const nodesRef = useRef<Node[]>([]);
+  const prevNodesRef = useRef<Node[]>([]);
+  const isInitialLoad = useRef<boolean>(true);
 
-  // keep nodesRef in sync
   useEffect(() => {
     nodesRef.current = nodes;
   }, [nodes]);
 
-  // ─── Hooks ────────────────────────────────────────────────────
+  const { enqueue, forceFlush, retry, syncStatus } = useSyncEngine(
+    useCallback(
+      async (delta: Delta) => {
+        await api.patch(`pages/${pageId}/nodes`, delta);
+      },
+      [pageId],
+    ),
+    { debounceMs: 800, maxRetries: 3, retryBaseMs: 1000 },
+  );
+
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      prevNodesRef.current = nodes;
+      isInitialLoad.current = false;
+      return;
+    }
+
+    const prev = prevNodesRef.current;
+    const curr = nodes;
+
+    const prevMap = new Map(prev.map((n) => [n.id, n]));
+    const currMap = new Map(curr.map((n) => [n.id, n]));
+
+    curr.forEach((node) => {
+      const prevNode = prevMap.get(node.id);
+      if (!prevNode || JSON.stringify(prevNode) !== JSON.stringify(node)) {
+        enqueue({ type: "upsert", node }, curr);
+      }
+    });
+
+    prev.forEach((node) => {
+      if (!currMap.has(node.id)) {
+        enqueue({ type: "delete", id: node.id }, curr);
+      }
+    });
+
+    prevNodesRef.current = curr;
+  }, [nodes, enqueue]);
+
   const {
     saveToHistory,
     undo: historyUndo,
@@ -64,22 +100,18 @@ export default function EditorPage() {
     history,
   } = useCanvasHistory(nodes);
 
-  const {
-    addShape,
-    duplicateShape: actionsDuplicate,
-    deleteShape: actionsDelete,
-    updateNodeProperty,
-  } = useShapeActions(
-    nodes,
-    setNodes,
-    saveToHistory,
-    stagePosition,
-    canvasSize,
-    stageScale,
-    setSelectedId,
-    setTool,
-    setError,
-  );
+  const { addShape, duplicateShape, deleteShape, updateNodeProperty } =
+    useShapeActions(
+      nodes,
+      setNodes,
+      saveToHistory,
+      stagePosition,
+      canvasSize,
+      stageScale,
+      setSelectedId,
+      setTool,
+      setError,
+    );
 
   const { zoomIn, zoomOut, resetView } = useViewControls(
     setStageScale,
@@ -113,14 +145,28 @@ export default function EditorPage() {
     tool,
   );
 
-  // ─── Load nodes ───────────────────────────────────────────────
+  const handleDragWithSave = useCallback(
+    (...args: Parameters<typeof handleDrag>) => {
+      handleDrag(...args);
+      const event = args[0] as any;
+      if (event?.type === "dragend") {
+        setTimeout(() => {
+          nodesRef.current.forEach((node) =>
+            enqueue({ type: "upsert", node }, nodesRef.current),
+          );
+        }, 0);
+      }
+    },
+    [handleDrag, enqueue],
+  );
+
   useEffect(() => {
     const fetchNodes = async () => {
       setIsLoading(true);
+      isInitialLoad.current = true;
       try {
         const data = await api.get(`pages/${pageId}/nodes`);
         setNodes(data);
-        setSaveStatus("saved");
       } catch (err) {
         console.error("Failed to load nodes:", err);
         setError("Failed to load canvas.");
@@ -131,146 +177,32 @@ export default function EditorPage() {
     fetchNodes();
   }, [pageId]);
 
-  // ─── Core save function ───────────────────────────────────────
-  const saveNodes = useCallback(
-    async (nodesToSave: Node[]) => {
-      setSaving(true);
-      setSaveStatus("saving");
-      try {
-        const payload = nodesToSave.map(({ id, ...rest }) => rest);
-        const saved = await api.post(`pages/${pageId}/nodes`, {
-          nodes: payload,
-        });
-        setNodes(saved);
-        setSaveStatus("saved");
-      } catch (err) {
-        console.error("Failed to save:", err);
-        setError("Failed to save. Please try again.");
-        setSaveStatus("unsaved");
-      } finally {
-        setSaving(false);
-      }
-    },
-    [pageId],
-  );
-
-  // ─── Action-based save wrappers ───────────────────────────────
-  // These wrap existing actions and save AFTER the action completes
-
-  const addShapeAndSave = useCallback(
-    async (...args: Parameters<typeof addShape>) => {
-      addShape(...args);
-      // addShape updates nodes internally — get updated state via callback
-      setNodes((current) => {
-        saveNodes(current);
-        return current;
-      });
-    },
-    [addShape, saveNodes],
-  );
-
-  const duplicateAndSave = useCallback(
-    async (id: string | null) => {
-      if (!id) return;
-      actionsDuplicate(id);
-      setNodes((current) => {
-        saveNodes(current);
-        return current;
-      });
-    },
-    [actionsDuplicate, saveNodes],
-  );
-
-  const deleteAndSave = useCallback(
-    async (id: string | null) => {
-      if (!id) return;
-      actionsDelete(id);
-      setNodes((current) => {
-        saveNodes(current);
-        return current;
-      });
-    },
-    [actionsDelete, saveNodes],
-  );
-
-  const updatePropertyAndSave = useCallback(
-    async (...args: Parameters<typeof updateNodeProperty>) => {
-      updateNodeProperty(...args);
-      setNodes((current) => {
-        saveNodes(current);
-        return current;
-      });
-    },
-    [updateNodeProperty, saveNodes],
-  );
-
-  // wrap transformEnd and dragEnd to save after user finishes interacting
-  const handleTransformEndAndSave = useCallback(
-    (...args: Parameters<typeof handleTransformEnd>) => {
-      handleTransformEnd(...args);
-      setNodes((current) => {
-        saveNodes(current);
-        return current;
-      });
-    },
-    [handleTransformEnd, saveNodes],
-  );
-
-  const handleDragAndSave = useCallback(
-    (...args: Parameters<typeof handleDrag>) => {
-      handleDrag(...args);
-      // only save on dragend, not during drag
-      const event = args[0] as any;
-      if (event?.type === "dragend") {
-        setNodes((current) => {
-          saveNodes(current);
-          return current;
-        });
-      }
-    },
-    [handleDrag, saveNodes],
-  );
-
-  // ─── Save on page leave ───────────────────────────────────────
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (saveStatus === "unsaved") {
-        saveNodes(nodesRef.current);
-        e.preventDefault();
-      }
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [saveStatus, saveNodes]);
-
-  // ─── Ctrl+S manual save ───────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
-          case "s":
+      if (!(e.ctrlKey || e.metaKey)) return;
+      switch (e.key) {
+        case "s":
+          e.preventDefault();
+          forceFlush(nodesRef.current);
+          break;
+        case "z":
+          e.preventDefault();
+          if (e.shiftKey) historyRedo(setNodes, setSelectedId);
+          else historyUndo(setNodes, setSelectedId);
+          break;
+        case "c":
+          if (selectedId) {
             e.preventDefault();
-            saveNodes(nodesRef.current);
-            break;
-          case "z":
+            duplicateShape(selectedId);
+          }
+          break;
+        case "Delete":
+        case "Backspace":
+          if (selectedId) {
             e.preventDefault();
-            if (e.shiftKey) historyRedo(setNodes, setSelectedId);
-            else historyUndo(setNodes, setSelectedId);
-            break;
-          case "c":
-            if (selectedId) {
-              e.preventDefault();
-              duplicateAndSave(selectedId);
-            }
-            break;
-          case "Delete":
-          case "Backspace":
-            if (selectedId) {
-              e.preventDefault();
-              deleteAndSave(selectedId);
-            }
-            break;
-        }
+            deleteShape(selectedId);
+          }
+          break;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -279,25 +211,33 @@ export default function EditorPage() {
     selectedId,
     historyUndo,
     historyRedo,
-    duplicateAndSave,
-    deleteAndSave,
-    saveNodes,
+    duplicateShape,
+    deleteShape,
+    forceFlush,
   ]);
 
-  // ─── Canvas size ──────────────────────────────────────────────
   useEffect(() => {
-    const updateCanvasSize = () => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (syncStatus === "pending" || syncStatus === "error") {
+        forceFlush(nodesRef.current);
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [syncStatus, forceFlush]);
+
+  useEffect(() => {
+    const update = () =>
       setCanvasSize({
         width: Math.max(400, window.innerWidth - 520),
         height: Math.max(300, window.innerHeight - 60),
       });
-    };
-    updateCanvasSize();
-    window.addEventListener("resize", updateCanvasSize);
-    return () => window.removeEventListener("resize", updateCanvasSize);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
-  // ─── Transformer attachment ───────────────────────────────────
   useEffect(() => {
     if (
       tool === "select" &&
@@ -305,9 +245,9 @@ export default function EditorPage() {
       transformerRef.current &&
       stageRef.current
     ) {
-      const selectedKonvaNode = stageRef.current.findOne(`#${selectedId}`);
-      if (selectedKonvaNode) {
-        transformerRef.current.nodes([selectedKonvaNode]);
+      const node = stageRef.current.findOne(`#${selectedId}`);
+      if (node) {
+        transformerRef.current.nodes([node]);
         transformerRef.current.getLayer()?.batchDraw();
       }
     }
@@ -315,12 +255,16 @@ export default function EditorPage() {
 
   const selectedNode = nodes.find((n) => n.id === selectedId) || null;
 
-  // save status indicator — same UI as original, just small text in toolbar
-  const saveIndicator = saving
-    ? "Saving..."
-    : saveStatus === "unsaved"
-      ? "Unsaved"
-      : "Saved";
+  const saveIndicator =
+    syncStatus === "idle"
+      ? "idle"
+      : syncStatus === "pending"
+        ? "pending"
+        : syncStatus === "syncing"
+          ? "syncing"
+          : syncStatus === "retrying"
+            ? "retrying"
+            : "error";
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-50 font-sans">
@@ -335,8 +279,8 @@ export default function EditorPage() {
         stageScale={stageScale}
         canUndo={historyStep > 0}
         canRedo={historyStep < history.length - 1}
-        saveIndicator={saveIndicator} // pass to TopToolbar to show status
-        onSave={() => saveNodes(nodesRef.current)}
+        saveIndicator={saveIndicator}
+        onSave={() => forceFlush(nodesRef.current)}
         onBack={() => router.back()}
       />
 
@@ -347,7 +291,7 @@ export default function EditorPage() {
       />
 
       <CanvasArea
-        addShape={addShapeAndSave}
+        addShape={addShape}
         nodes={nodes}
         canvasSize={canvasSize}
         stageScale={stageScale}
@@ -361,9 +305,9 @@ export default function EditorPage() {
         stageRef={stageRef}
         transformerRef={transformerRef}
         handleSelect={handleSelect}
-        handleDrag={handleDragAndSave}
+        handleDrag={handleDragWithSave}
         handleTransform={handleTransform}
-        handleTransformEnd={handleTransformEndAndSave}
+        handleTransformEnd={handleTransformEnd}
         handleWheel={handleWheel}
         handleStageMouseDown={handleStageMouseDown}
         handleStageMouseMove={handleStageMouseMove}
@@ -372,9 +316,9 @@ export default function EditorPage() {
 
       <InspectorPanel
         selectedNode={selectedNode}
-        updateNodeProperty={updatePropertyAndSave}
-        duplicateShape={() => duplicateAndSave(selectedId)}
-        deleteShape={() => deleteAndSave(selectedId)}
+        updateNodeProperty={updateNodeProperty}
+        duplicateShape={() => duplicateShape(selectedId)}
+        deleteShape={() => deleteShape(selectedId)}
       />
 
       <LoadingOverlay isLoading={isLoading} />

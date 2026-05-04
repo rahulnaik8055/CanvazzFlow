@@ -23,7 +23,7 @@ interface TopToolbarProps {
   stageScale: number;
   canUndo: boolean;
   canRedo: boolean;
-  saveIndicator: "Saving..." | "Unsaved" | "Saved";
+  saveIndicator: "idle" | "pending" | "syncing" | "retrying" | "error";
   onSave: () => void;
   onBack: () => void;
 }
@@ -43,8 +43,34 @@ export default function TopToolbar({
   onSave,
   onBack,
 }: TopToolbarProps) {
+  const saveStatusLabel =
+    saveIndicator === "idle"
+      ? "Saved"
+      : saveIndicator === "pending"
+        ? "Saving..."
+        : saveIndicator === "syncing"
+          ? "Syncing..."
+          : saveIndicator === "retrying"
+            ? "Retrying..."
+            : "Error";
+
+  const isSaveDisabled =
+    saveIndicator === "idle" ||
+    saveIndicator === "pending" ||
+    saveIndicator === "syncing";
+
+  const isSaveInProgress =
+    saveIndicator === "pending" || saveIndicator === "syncing";
+
+  const saveStatusClass =
+    saveIndicator === "idle"
+      ? "text-green-600"
+      : saveIndicator === "pending" || saveIndicator === "syncing"
+        ? "text-gray-400"
+        : "text-orange-500";
+
   return (
-    <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm px-3 z-20 flex items-center justify-between h-[60px]">
+    <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm px-3 z-20 flex items-center justify-between h-15">
       {/* Left — back + title + tools */}
       <div className="flex items-center gap-3">
         <button
@@ -118,7 +144,7 @@ export default function TopToolbar({
           >
             <ZoomOut size={15} />
           </button>
-          <span className="min-w-[3.5rem] text-center text-sm text-gray-600 font-mono">
+          <span className="min-w-14 text-center text-sm text-gray-600 font-mono">
             {Math.round(stageScale * 100)}%
           </span>
           <button
@@ -141,26 +167,16 @@ export default function TopToolbar({
 
         {/* Save status + button */}
         <div className="flex items-center gap-2">
-          <span
-            className={`text-xs font-medium ${
-              saveIndicator === "Saved"
-                ? "text-green-600"
-                : saveIndicator === "Saving..."
-                  ? "text-gray-400"
-                  : "text-orange-500"
-            }`}
-          >
-            {saveIndicator}
+          <span className={`text-xs font-medium ${saveStatusClass}`}>
+            {saveStatusLabel}
           </span>
           <button
             onClick={onSave}
-            disabled={
-              saveIndicator === "Saving..." || saveIndicator === "Saved"
-            }
+            disabled={isSaveDisabled}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Save (Ctrl+S)"
           >
-            {saveIndicator === "Saving..." ? (
+            {isSaveInProgress ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
               <Save size={14} />

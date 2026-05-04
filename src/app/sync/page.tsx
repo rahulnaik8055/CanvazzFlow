@@ -6,9 +6,10 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useApi } from "@/lib/api";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 export default function SyncPage() {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const router = useRouter();
   const api = useApi();
 
@@ -16,15 +17,12 @@ export default function SyncPage() {
     if (!isLoaded || !isSignedIn) return;
 
     const createUser = async () => {
-      const token = await getToken();
-
-      await api.post("/users/sync", null);
-
-      router.replace("/editor");
+      await api.post("users/sync", {});
+      router.replace("/project");
     };
 
     createUser();
   }, [isLoaded, isSignedIn]);
 
-  return <p>Setting up your account...</p>;
+  return <LoadingOverlay isLoading={true} text="Syncing your account..." />;
 }

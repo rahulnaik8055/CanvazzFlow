@@ -56,6 +56,7 @@ interface CanvasAreaProps {
   handleStageMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   handleStageMouseMove: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   handleStageMouseUp: () => void;
+  onMouseLeave: () => void;
 }
 
 const ImageNode = ({ node, commonProps }: { node: Node; commonProps: any }) => {
@@ -158,6 +159,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
         onMouseDown={props.handleStageMouseDown}
         onMousemove={props.handleStageMouseMove}
         onMouseup={props.handleStageMouseUp}
+        onMouseLeave={props.onMouseLeave}
       >
         {/* Grid Layer */}
         <Layer zIndex={0}>{GridLayerComponent}</Layer>

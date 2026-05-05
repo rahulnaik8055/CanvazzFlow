@@ -23,7 +23,7 @@ interface TopToolbarProps {
   stageScale: number;
   canUndo: boolean;
   canRedo: boolean;
-  saveIndicator: "idle" | "pending" | "syncing" | "retrying" | "error";
+  saveIndicator: "Live" | "Reconnecting" | "Connecting...";
   onSave: () => void;
   onBack: () => void;
 }
@@ -43,31 +43,14 @@ export default function TopToolbar({
   onSave,
   onBack,
 }: TopToolbarProps) {
+  const isSaveInProgress = saveIndicator === "Live";
+  const isSaveDisabled = saveIndicator !== "Live";
   const saveStatusLabel =
-    saveIndicator === "idle"
-      ? "Saved"
-      : saveIndicator === "pending"
-        ? "Saving..."
-        : saveIndicator === "syncing"
-          ? "Syncing..."
-          : saveIndicator === "retrying"
-            ? "Retrying..."
-            : "Error";
-
-  const isSaveDisabled =
-    saveIndicator === "idle" ||
-    saveIndicator === "pending" ||
-    saveIndicator === "syncing";
-
-  const isSaveInProgress =
-    saveIndicator === "pending" || saveIndicator === "syncing";
-
-  const saveStatusClass =
-    saveIndicator === "idle"
-      ? "text-green-600"
-      : saveIndicator === "pending" || saveIndicator === "syncing"
-        ? "text-gray-400"
-        : "text-orange-500";
+    saveIndicator === "Live"
+      ? "All changes saved"
+      : saveIndicator === "Reconnecting"
+        ? "Reconnecting..."
+        : "Connecting...";
 
   return (
     <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm px-3 z-20 flex items-center justify-between h-15">
@@ -165,25 +148,29 @@ export default function TopToolbar({
 
         <div className="w-px h-5 bg-gray-200" />
 
-        {/* Save status + button */}
-        <div className="flex items-center gap-2">
-          <span className={`text-xs font-medium ${saveStatusClass}`}>
-            {saveStatusLabel}
-          </span>
-          <button
-            onClick={onSave}
-            disabled={isSaveDisabled}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Save (Ctrl+S)"
-          >
-            {isSaveInProgress ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Save size={14} />
-            )}
-            Save
-          </button>
-        </div>
+        {/* Save status */}
+        <button
+          onClick={onSave}
+          disabled={isSaveDisabled}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
+            isSaveInProgress
+              ? "bg-green-100 text-green-700 hover:bg-green-200"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          } disabled:opacity-40 disabled:cursor-not-allowed`}
+          title={saveStatusLabel}
+        >
+          {isSaveInProgress ? (
+            <>
+              <Save size={15} />
+              <span className="text-sm font-medium">{saveStatusLabel}</span>
+            </>
+          ) : (
+            <>
+              <Loader2 size={15} className="animate-spin" />
+              <span className="text-sm font-medium">{saveStatusLabel}</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

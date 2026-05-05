@@ -18,4 +18,5 @@ export interface Node {
   strokeStyle?: "solid" | "dashed";
   imageUrl?: string;
   points?: number[]; // For line shapes
+  [key: string]: any;
 }

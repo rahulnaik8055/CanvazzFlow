@@ -1,5 +1,10 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MemberRole } from 'generated/prisma/enums';
 
 @Injectable()
 export class PageService {
@@ -99,5 +104,35 @@ export class PageService {
     );
 
     return { success: true };
+  }
+
+  async getMyRole(
+    pageId: string,
+    userId: string,
+  ): Promise<{ role: MemberRole }> {
+    const page = await this.prisma.page.findUnique({
+      where: { id: pageId },
+      select: {
+        projectId: true,
+        project: { select: { ownerId: true } },
+      },
+    });
+    if (!page) throw new NotFoundException('Page not found');
+
+    if (page.project.ownerId === userId) {
+      return { role: MemberRole.owner };
+    }
+
+    const member = await this.prisma.projectMember.findUnique({
+      where: {
+        projectId_userId: { projectId: page.projectId, userId },
+      },
+      select: { role: true },
+    });
+
+    // 403 so the frontend treats it as "denied", not a generic error
+    if (!member) throw new ForbiddenException('No access to this page');
+
+    return { role: member.role };
   }
 }

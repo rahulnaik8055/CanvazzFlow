@@ -1,65 +1,149 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-
-interface GetProjectsParams {
-  ownerId: string;
-  page: number;
-  limit: number;
-  search: string;
-}
+import { ProjectVisibility } from 'generated/prisma/enums';
 
 @Injectable()
-export class ProjectService {
+export class ProjectsService {
   constructor(private prisma: PrismaService) {}
 
-  async getProjects({ ownerId, page, limit, search }: GetProjectsParams) {
-    const skip = (page - 1) * limit;
+  // ─── Create ───────────────────────────────────────────────────────────────
 
-    const where = {
-      ownerId,
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: 'insensitive' as const } },
-          { description: { contains: search, mode: 'insensitive' as const } },
-        ],
-      }),
-    };
+  async createProject(
+    userId: string,
+    dto: { name: string; description?: string; visibility?: ProjectVisibility },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const project = await tx.project.create({
+        data: {
+          name: dto.name,
+          description: dto.description,
+          visibility: dto.visibility ?? 'public',
+          ownerId: userId,
+        },
+      });
 
-    const [projects, total] = await Promise.all([
-      this.prisma.project.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.project.count({ where }),
-    ]);
+      // Owner is also a member — one table for all access checks
+      await tx.projectMember.create({
+        data: { projectId: project.id, userId, role: 'owner' },
+      });
 
-    return {
-      data: projects,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        hasNext: page < Math.ceil(total / limit),
-        hasPrev: page > 1,
-      },
-    };
-  }
-
-  getProjectById(id: string, ownerId: string) {
-    return this.prisma.project.findFirst({
-      where: { id, ownerId },
+      return project;
     });
   }
 
-  createProject(data: any, ownerId: string) {
-    return this.prisma.project.create({
-      data: {
-        ...data,
-        ownerId,
+  // ─── My projects ──────────────────────────────────────────────────────────
+
+  async getMyProjects(userId: string) {
+    const memberships = await this.prisma.projectMember.findMany({
+      where: { userId },
+      include: {
+        project: {
+          include: {
+            // Your schema names this relation "User" not "owner"
+            User: { select: { id: true, firstName: true, lastName: true } },
+            _count: { select: { members: true } },
+          },
+        },
+      },
+      orderBy: { joinedAt: 'desc' },
+    });
+
+    return memberships.map((m) => ({
+      ...m.project,
+      myRole: m.role,
+      memberCount: m.project._count.members,
+    }));
+  }
+
+  // ─── Search public projects ───────────────────────────────────────────────
+
+  async searchProjects(userId: string, query: string) {
+    const existingMembershipIds = await this.prisma.projectMember
+      .findMany({ where: { userId }, select: { projectId: true } })
+      .then((ms) => ms.map((m) => m.projectId));
+
+    const pendingRequestIds = await this.prisma.accessRequest
+      .findMany({
+        where: { userId, status: 'pending' },
+        select: { projectId: true },
+      })
+      .then((rs) => rs.map((r) => r.projectId));
+
+    const projects = await this.prisma.project.findMany({
+      where: {
+        visibility: 'public',
+        id: { notIn: existingMembershipIds },
+        name: { contains: query, mode: 'insensitive' },
+      },
+      include: {
+        // "User" not "owner"
+        User: { select: { id: true, firstName: true, lastName: true } },
+        _count: { select: { members: true } },
+      },
+      take: 20,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return projects.map((p) => ({
+      ...p,
+      memberCount: p._count.members,
+      requestPending: pendingRequestIds.includes(p.id),
+    }));
+  }
+
+  // ─── Get single project ───────────────────────────────────────────────────
+
+  async getProject(projectId: string, userId: string) {
+    const membership = await this.prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+    if (!membership) throw new ForbiddenException('Access denied');
+
+    return this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        User: { select: { id: true, firstName: true, lastName: true } },
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+        pages: true,
+        _count: { select: { members: true } },
       },
     });
+  }
+
+  // ─── Delete ───────────────────────────────────────────────────────────────
+
+  async deleteProject(projectId: string, userId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    if (project.ownerId !== userId)
+      throw new ForbiddenException('Only the owner can delete this project');
+
+    return this.prisma.project.delete({ where: { id: projectId } });
+  }
+
+  // ─── Membership check (used by Liveblocks auth) ───────────────────────────
+
+  async isMember(projectId: string, userId: string): Promise<boolean> {
+    const membership = await this.prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+    return !!membership;
   }
 }

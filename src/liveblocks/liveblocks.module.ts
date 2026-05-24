@@ -1,7 +1,12 @@
+// liveblocks.module.ts
 import { Module } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { LiveblocksController } from './liveblocks.controller';
+import { LiveblocksService } from './liveblocks.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  providers: [PrismaService],
+  imports: [PrismaModule],
+  controllers: [LiveblocksController],
+  providers: [LiveblocksService],
 })
 export class LiveblocksModule {}

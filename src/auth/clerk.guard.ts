@@ -16,7 +16,12 @@ export class ClerkAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
 
-    const token = request.headers.authorization?.split(' ')[1];
+    // Try Authorization header first, fall back to __session cookie
+    // Liveblocks auth sends credentials: "include" (cookies) but no header
+    const token =
+      request.headers.authorization?.split(' ')[1] ??
+      request.cookies?.['__session'];
+
     if (!token) throw new UnauthorizedException('No token provided');
 
     try {

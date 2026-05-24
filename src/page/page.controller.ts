@@ -9,6 +9,8 @@ import {
   Req,
   Query,
   UseGuards,
+  NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ClerkAuthGuard } from 'src/auth/clerk.guard';
 import { PageService } from './page.service';
@@ -55,5 +57,11 @@ export class PageController {
     @Req() req: any,
   ) {
     return this.pageService.deletePage(projectId, pageId, req['userId']);
+  }
+
+  // pages.controller.ts — add this alongside your existing nodes endpoint
+  @Get(':pageId/my-role')
+  getMyRole(@Param('pageId') pageId: string, @Req() req) {
+    return this.pageService.getMyRole(pageId, req['userId']);
   }
 }

@@ -8,10 +8,27 @@ import { UsersModule } from './users/users.module';
 import { NodesModule } from './nodes/nodes.module';
 import { LiveblocksService } from './liveblocks/liveblocks.service';
 import { LiveblocksModule } from './liveblocks/liveblocks.module';
+import { AccessRequestsModule } from './access-requests/access-requests.module';
+import { LiveblocksAuthModule } from './liveblocks-auth/liveblocks-auth.module';
+import { ProjectMembersService } from './project-members/project-members.service';
+import { ProjectMembersController } from './project-members/project-members.controller';
+import { ProjectMembersModule } from './project-members/project-members.module';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Module({
-  imports: [PrismaModule, ProjectModule, PageModule, UsersModule, NodesModule, LiveblocksModule],
-  controllers: [AppController],
-  providers: [AppService, LiveblocksService],
+  imports: [
+    GatewayModule,
+    PrismaModule,
+    ProjectModule,
+    PageModule,
+    UsersModule,
+    NodesModule,
+    LiveblocksModule,
+    AccessRequestsModule,
+    LiveblocksAuthModule,
+    ProjectMembersModule,
+  ],
+  controllers: [AppController, ProjectMembersController],
+  providers: [AppService, LiveblocksService, ProjectMembersService],
 })
 export class AppModule {}

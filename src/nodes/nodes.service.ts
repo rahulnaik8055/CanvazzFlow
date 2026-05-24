@@ -20,11 +20,33 @@ export class NodesService {
 
   // ─── Auth guard ──────────────────────────────────────────────────────────────
 
+  // nodes.service.ts
+
   private async verifyPageOwnership(pageId: string, userId: string) {
-    const page = await this.prisma.page.findFirst({
-      where: { id: pageId, project: { ownerId: userId } },
+    const page = await this.prisma.page.findUnique({
+      where: { id: pageId },
+      include: {
+        project: {
+          select: {
+            ownerId: true,
+            members: {
+              where: { userId },
+              select: { role: true },
+            },
+          },
+        },
+      },
     });
-    if (!page) throw new ForbiddenException('Page not found or access denied');
+
+    if (!page) throw new ForbiddenException('Page not found');
+
+    const isOwner = page.project.ownerId === userId;
+    const isMember = page.project.members.length > 0;
+
+    if (!isOwner && !isMember) {
+      throw new ForbiddenException('Access denied');
+    }
+
     return page;
   }
 

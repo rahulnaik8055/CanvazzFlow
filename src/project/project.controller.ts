@@ -1,43 +1,64 @@
+/**
+ * projects.controller.ts
+ *
+ * GET    /projects          → my projects
+ * GET    /projects/search   → search public projects
+ * GET    /projects/:id      → single project (members only)
+ * POST   /projects          → create project
+ * DELETE /projects/:id      → delete project (owner only)
+ */
+
 import {
-  Body,
   Controller,
   Get,
-  Param,
   Post,
+  Delete,
+  Body,
+  Param,
   Query,
-  Req,
   UseGuards,
+  Req,
 } from '@nestjs/common';
-import { ProjectService } from './project.service';
+
 import { ClerkAuthGuard } from 'src/auth/clerk.guard';
+import { ProjectsService } from './project.service';
 
 @Controller('project')
 @UseGuards(ClerkAuthGuard)
-export class ProjectController {
-  constructor(private readonly projectService: ProjectService) {}
+export class ProjectsController {
+  constructor(private projectsService: ProjectsService) {}
 
   @Get()
-  getProjects(
-    @Req() req: any,
-    @Query('page') page = '1',
-    @Query('limit') limit = '9',
-    @Query('search') search = '',
-  ) {
-    return this.projectService.getProjects({
-      ownerId: req['userId'],
-      page: parseInt(page),
-      limit: parseInt(limit),
-      search,
-    });
+  getMyProjects(@Req() req: Request) {
+    return this.projectsService.getMyProjects(req['userId']);
+  }
+
+  // /projects/search?q=whiteboard
+  @Get('search')
+  searchProjects(@Req() req: Request, @Query('q') query: string = '') {
+    return this.projectsService.searchProjects(req['userId'], query);
   }
 
   @Get(':id')
-  getProjectById(@Param('id') id: string, @Req() req: any) {
-    return this.projectService.getProjectById(id, req['userId']);
+  getProject(@Param('id') id: string, @Req() req: Request) {
+    return this.projectsService.getProject(id, req['userId']);
   }
 
   @Post()
-  createProject(@Body() data: any, @Req() req: any) {
-    return this.projectService.createProject(data, req['userId']);
+  createProject(
+    @Req() req: Request,
+    @Body()
+    body: {
+      name: string;
+      description?: string;
+      visibility?: 'public' | 'private';
+    },
+  ) {
+    return this.projectsService.createProject(req['userId'], body);
+  }
+
+  @Delete(':id')
+  deleteProject(@Param('id') id: string, @Req() req: Request) {
+    return this.projectsService.deleteProject(id, req['userId']);
   }
 }

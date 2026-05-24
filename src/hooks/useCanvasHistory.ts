@@ -1,4 +1,3 @@
-// /app/hooks/useCanvasHistory.ts
 import { useState, useCallback } from "react";
 import { Node } from "@/types/CanvasTypes";
 

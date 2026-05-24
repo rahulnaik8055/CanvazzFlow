@@ -1,4 +1,4 @@
-// app/sync/page.tsx — hits once after signup, never again
+
 "use client";
 
 import { useAuth } from "@clerk/nextjs";

@@ -4,7 +4,6 @@ import { Node } from "@/types/CanvasTypes";
 
 export const client = createClient({
   authEndpoint: async (room) => {
-    // Plain fetch — no React hooks allowed outside components
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/liveblocks-auth`,
       {

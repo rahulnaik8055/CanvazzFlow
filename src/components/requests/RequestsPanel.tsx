@@ -1,17 +1,8 @@
 "use client";
 
-/**
- * RequestsPanel.tsx
- *
- * Slide-out panel anchored to the sidebar showing all pending access requests.
- * Each card has Approve and Deny buttons with loading state.
- * Closes when clicking outside.
- */
-
 import React, { useEffect, useRef } from "react";
 import { Check, X, Loader2, Users, Clock } from "lucide-react";
 import { AccessRequest } from "@/hooks/useAccessRequests";
-
 
 interface Props {
   requests: AccessRequest[];
@@ -20,7 +11,7 @@ interface Props {
   onApprove: (id: string) => void;
   onDeny: (id: string) => void;
   onClose: () => void;
-  collapsed: boolean; // sidebar collapsed state — positions panel correctly
+  collapsed: boolean;
 }
 
 function formatTime(iso: string) {
@@ -49,7 +40,6 @@ export function RequestsPanel({
 }: Props) {
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
@@ -60,7 +50,6 @@ export function RequestsPanel({
     return () => document.removeEventListener("mousedown", handler);
   }, [onClose]);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -72,10 +61,9 @@ export function RequestsPanel({
   return (
     <div
       ref={panelRef}
-      style={{ left: collapsed ? 60 : 220 }} // sidebar width + 4px gap
+      style={{ left: collapsed ? 60 : 220 }}
       className="fixed top-16 z-50 w-80 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden animate-in slide-in-from-left-2 duration-150"
     >
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Users size={14} className="text-gray-400" />
@@ -96,14 +84,12 @@ export function RequestsPanel({
         </button>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="px-4 py-2 bg-red-50 text-xs text-red-600 border-b border-red-100">
           {error}
         </div>
       )}
 
-      {/* List */}
       <div className="max-h-96 overflow-y-auto">
         {requests.length === 0 ? (
           <div className="px-4 py-10 text-center">
@@ -118,7 +104,6 @@ export function RequestsPanel({
                 key={req.id}
                 className="px-4 py-3 border-b border-gray-50 last:border-0"
               >
-                {/* User info */}
                 <div className="flex items-start gap-2.5 mb-2.5">
                   {req.user.imageUrl ? (
                     <img
@@ -149,7 +134,6 @@ export function RequestsPanel({
                   </div>
                 </div>
 
-                {/* Project */}
                 <p className="text-xs text-gray-500 mb-1">
                   wants to join{" "}
                   <span className="font-medium text-gray-700">
@@ -157,14 +141,12 @@ export function RequestsPanel({
                   </span>
                 </p>
 
-                {/* Optional message */}
                 {req.message && (
                   <p className="text-xs text-gray-400 italic mb-2.5 line-clamp-2">
                     "{req.message}"
                   </p>
                 )}
 
-                {/* Actions */}
                 <div className="flex gap-2 mt-2">
                   <button
                     onClick={() => onApprove(req.id)}

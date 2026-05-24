@@ -1,13 +1,6 @@
 "use client";
 
 import { useParams } from "next/navigation";
-/**
- * useAccessRequests.ts
- *
- * Polls for pending access requests every 15 seconds.
- * Exposes approve/deny with optimistic UI — the request disappears
- * from the list immediately, then reverts if the server call fails.
- */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
@@ -28,17 +21,15 @@ export interface AccessRequest {
   };
 }
 
-const POLL_INTERVAL = 15_000; // 15 seconds
+const POLL_INTERVAL = 15_000;
 
 export function useAccessRequests() {
   const [requests, setRequests] = useState<AccessRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null); // requestId being actioned
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { projectId } = useParams();
-
-  // ─── Fetch ─────────────────────────────────────────────────────────────────
 
   const fetchRequests = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -60,7 +51,6 @@ export function useAccessRequests() {
     }
   }, []);
 
-  // Initial fetch + polling
   useEffect(() => {
     fetchRequests();
     intervalRef.current = setInterval(() => fetchRequests(true), POLL_INTERVAL);
@@ -69,11 +59,8 @@ export function useAccessRequests() {
     };
   }, [fetchRequests]);
 
-  // ─── Approve ───────────────────────────────────────────────────────────────
-
   const approve = useCallback(
     async (requestId: string) => {
-      // Optimistic: remove from list immediately
       const prev = requests;
       setRequests((r) => r.filter((req) => req.id !== requestId));
       setActionLoading(requestId);
@@ -85,7 +72,6 @@ export function useAccessRequests() {
         );
         if (!res.ok) throw new Error("Failed to approve");
       } catch {
-        // Revert on failure
         setRequests(prev);
         setError("Failed to approve — please try again");
       } finally {
@@ -94,8 +80,6 @@ export function useAccessRequests() {
     },
     [requests],
   );
-
-  // ─── Deny ──────────────────────────────────────────────────────────────────
 
   const deny = useCallback(
     async (requestId: string) => {

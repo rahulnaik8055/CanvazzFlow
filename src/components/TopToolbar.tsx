@@ -64,7 +64,6 @@ export default function TopToolbar({
 
   return (
     <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm px-3 z-20 flex items-center justify-between h-14">
-      {/* ── Left ──────────────────────────────────── */}
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
@@ -76,7 +75,6 @@ export default function TopToolbar({
 
         <h1 className="text-sm font-semibold text-gray-900">Canvas editor</h1>
 
-        {/* Role badge — always visible */}
         <span
           className={`text-xs font-medium px-2 py-0.5 rounded-md border capitalize ${ROLE_STYLES[role]}`}
         >
@@ -85,7 +83,6 @@ export default function TopToolbar({
 
         <div className="w-px h-5 bg-gray-200 mx-1" />
 
-        {/* Select / Pan — available to all roles */}
         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
           <button
             onClick={() => setTool("select")}
@@ -112,9 +109,7 @@ export default function TopToolbar({
         </div>
       </div>
 
-      {/* ── Right ─────────────────────────────────── */}
       <div className="flex items-center gap-3">
-        {/* Undo / Redo — disabled for viewers (canUndo/canRedo already false) */}
         <div className="flex items-center gap-1">
           <button
             onClick={undo}
@@ -136,7 +131,6 @@ export default function TopToolbar({
 
         <div className="w-px h-5 bg-gray-200" />
 
-        {/* Zoom — available to all roles */}
         <div className="flex items-center gap-1">
           <button
             onClick={zoomOut}
@@ -165,7 +159,6 @@ export default function TopToolbar({
 
         <div className="w-px h-5 bg-gray-200" />
 
-        {/* Save status */}
         <button
           onClick={onSave}
           disabled={!isLive}

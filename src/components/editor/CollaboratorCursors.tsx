@@ -1,11 +1,3 @@
-/**
- * CollaboratorCursors.tsx
- *
- * Renders every other user's cursor on top of the canvas.
- * Uses ReturnType<typeof useOthers> instead of importing Others directly
- * — avoids the generic type parameter issue with @liveblocks/client.
- */
-
 import React from "react";
 import { useOthers } from "@/liveblocks.config";
 

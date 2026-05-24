@@ -27,7 +27,6 @@ function Sidebar({
           collapsed ? "w-15" : "w-55"
         }`}
       >
-        {/* Logo */}
         <div
           className={`flex items-center h-16 border-b border-gray-100 px-4 ${
             collapsed ? "justify-center" : "gap-2"
@@ -41,7 +40,6 @@ function Sidebar({
           )}
         </div>
 
-        {/* Nav items */}
         <nav className="flex-1 py-4 px-2 flex flex-col gap-1">
           {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
             const isActive =
@@ -64,7 +62,6 @@ function Sidebar({
           })}
         </nav>
 
-        {/* Toggle button */}
         <button
           onClick={onToggle}
           className="absolute -right-3 top-20 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors z-10"

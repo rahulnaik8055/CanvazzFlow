@@ -27,7 +27,6 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div className="flex items-center justify-between gap-6 w-full mb-8">
-      {/* Left — title + search side by side */}
       <div className="flex items-center gap-4">
         <div className="shrink-0">
           <h1 className="text-2xl font-semibold text-gray-900 leading-tight">
@@ -51,7 +50,6 @@ export function PageHeader({
         )}
       </div>
 
-      {/* Right — refresh + action pinned to right */}
       <div className="flex items-center gap-2">
         {onRefresh && (
           <Button

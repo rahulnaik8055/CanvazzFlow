@@ -1,4 +1,3 @@
-// /app/lib/canvasUtils.ts
 import { Node } from "@/types/CanvasTypes";
 
 export const generateId = (): string =>

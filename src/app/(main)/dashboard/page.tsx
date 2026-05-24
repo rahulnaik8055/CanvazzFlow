@@ -24,7 +24,6 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
-      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-lg font-semibold text-gray-900">
@@ -41,20 +40,17 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Error */}
       {error && (
         <div className="mb-4 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
           {error}
         </div>
       )}
 
-      {/* Loading */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={18} className="animate-spin text-gray-300" />
         </div>
       ) : requests.length === 0 ? (
-        /* Empty state */
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
             <Users size={20} className="text-gray-300" />
@@ -67,7 +63,6 @@ export default function Dashboard() {
           </p>
         </div>
       ) : (
-        /* Request list */
         <div className="flex flex-col gap-3">
           {requests.map((req) => {
             const isActioning = actionLoading === req.id;
@@ -76,7 +71,6 @@ export default function Dashboard() {
                 key={req.id}
                 className="bg-white border border-gray-100 rounded-xl px-5 py-4 flex items-center gap-4"
               >
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-gray-900 truncate">
@@ -103,7 +97,6 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                {/* Actions */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => approve(req.id)}

@@ -1,4 +1,4 @@
-// components/AccessRequestBanner.tsx
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -41,11 +41,11 @@ function toRequest(r: ApiRequest): PendingRequest {
 }
 
 export function AccessRequestBanner({ projectId }: { projectId: string }) {
-  const socket = useSocket(); // no userId arg — gateway extracts it from token
+  const socket = useSocket();
   const [requests, setRequests] = useState<PendingRequest[]>([]);
   const api = useApi();
 
-  // ── Fetch requests that arrived before this component mounted ────────────
+
   useEffect(() => {
     api
       .get(`access-requests/project/${projectId}/pending`)
@@ -53,9 +53,7 @@ export function AccessRequestBanner({ projectId }: { projectId: string }) {
       .catch(() => {});
   }, [projectId]);
 
-  // ── Real-time: new requests while owner is in the editor ─────────────────
-  // Effect re-runs when socket goes from null → Socket instance,
-  // so the listener is always attached once the connection is ready.
+
   useEffect(() => {
     if (!socket) return;
 
@@ -71,9 +69,9 @@ export function AccessRequestBanner({ projectId }: { projectId: string }) {
     return () => {
       socket.off("access-request", onRequest);
     };
-  }, [socket, projectId]); // socket changing from null → instance triggers this
+  }, [socket, projectId]);
 
-  // ── Respond ───────────────────────────────────────────────────────────────
+
   const respond = useCallback(async (requestId: string, approved: boolean) => {
     setRequests((prev) => prev.filter((r) => r.requestId !== requestId));
     await api.patch(`access-requests/${requestId}/respond`, {

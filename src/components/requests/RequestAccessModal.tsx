@@ -19,14 +19,13 @@ export function RequestAccessModal({
   currentUserId,
 }: Props) {
   const router = useRouter();
-  const socket = useSocket(); // Socket | null
+  const socket = useSocket();
   const [state, setState] = useState<State>("idle");
   const [message, setMessage] = useState("");
   const api = useApi();
 
-  // ── Listen for the owner's response ──────────────────────────────────────
   useEffect(() => {
-    if (!socket) return; // null while Clerk token is resolving
+    if (!socket) return;
 
     function onResponse(data: { projectId: string; approved: boolean }) {
       if (data.projectId !== projectId) return;
@@ -44,7 +43,6 @@ export function RequestAccessModal({
     };
   }, [socket, projectId, router]);
 
-  // ── Send request ──────────────────────────────────────────────────────────
   const sendRequest = useCallback(async () => {
     setState("sending");
 
@@ -55,7 +53,6 @@ export function RequestAccessModal({
     setState(res.ok ? "pending" : "idle");
   }, [projectId, message]);
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl p-6 flex flex-col gap-4 shadow-sm">
       <div>

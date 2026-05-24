@@ -1,10 +1,3 @@
-/**
- * AccessRequests.tsx
- *
- * Shown on the dashboard when you own projects with pending join requests.
- * Approve → user gets ProjectMember created, can now enter the room.
- * Deny → request closed.
- */
 interface Request {
   id: string;
   user: { id: string; name: string; email: string };

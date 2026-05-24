@@ -100,7 +100,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
       props.canvasSize.height / props.stageScale +
       Math.abs(props.stagePosition.y / props.stageScale);
 
-    // Vertical lines
     for (let i = 0; i < stageWidth / GRID_SIZE + 10; i++) {
       gridLines.push(
         <Line
@@ -118,7 +117,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
       );
     }
 
-    // Horizontal lines
     for (let i = 0; i < stageHeight / GRID_SIZE + 10; i++) {
       gridLines.push(
         <Line
@@ -139,7 +137,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
     return gridLines;
   }, [props.showGrid, props.canvasSize, props.stageScale, props.stagePosition]);
 
-  // Sort nodes by zIndex to ensure correct rendering order
   const sortedNodes = useMemo(() => {
     return [...props.nodes].sort((a, b) => a.zIndex - b.zIndex);
   }, [props.nodes]);
@@ -161,10 +158,8 @@ export default function CanvasArea(props: CanvasAreaProps) {
         onMouseup={props.handleStageMouseUp}
         onMouseLeave={props.onMouseLeave}
       >
-        {/* Grid Layer */}
         <Layer zIndex={0}>{GridLayerComponent}</Layer>
 
-        {/* Shapes Layer */}
         <Layer zIndex={1}>
           {sortedNodes.map((node) => {
             const commonProps = {
@@ -295,7 +290,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
         </Layer>
       </Stage>
 
-      {/* Canvas Controls */}
       <div className="absolute bottom-6 right-6 bg-white rounded-lg shadow-lg border border-gray-200 p-2 flex flex-col gap-1">
         <button
           onClick={props.zoomIn}
@@ -322,7 +316,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
 
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-lg p-2">
         <div className="flex items-center gap-1">
-          {/* Rectangle */}
           <button
             onClick={() => addShape("rect")}
             className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
@@ -331,7 +324,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
             <Square className="w-5 h-5 text-gray-700" />
           </button>
 
-          {/* Circle */}
           <button
             onClick={() => addShape("circle")}
             className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
@@ -340,7 +332,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
             <CircleIcon className="w-5 h-5 text-gray-700" />
           </button>
 
-          {/* Text */}
           <button
             onClick={() => addShape("text")}
             className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
@@ -349,7 +340,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
             <Type className="w-5 h-5 text-gray-700" />
           </button>
 
-          {/* Frame */}
           <button
             onClick={() => addShape("frame")}
             className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
@@ -358,7 +348,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
             <Frame className="w-5 h-5 text-gray-700" />
           </button>
 
-          {/* Star */}
           <button
             onClick={() => addShape("star")}
             className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
@@ -367,7 +356,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
             <StarIcon className="w-5 h-5 text-gray-700" />
           </button>
 
-          {/* Diamond */}
           <button
             onClick={() => addShape("diamond")}
             className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
@@ -376,7 +364,6 @@ export default function CanvasArea(props: CanvasAreaProps) {
             <Diamond className="w-5 h-5 text-gray-700" />
           </button>
 
-          {/* Image */}
           <button
             onClick={() => {
               const input = document.createElement("input");

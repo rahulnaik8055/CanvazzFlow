@@ -35,7 +35,6 @@ export default function LoadingOverlay({
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-white/50">
       <div className="flex flex-col items-center gap-6">
-        {/* Animated grid icon */}
         <div className="relative w-14 h-14">
           <div className="absolute inset-0 rounded-2xl border border-gray-200" />
           <div className="absolute inset-2 grid grid-cols-2 gap-1">
@@ -47,7 +46,6 @@ export default function LoadingOverlay({
           <div className="absolute inset-0 rounded-2xl border-2 border-transparent border-t-blue-500 animate-spin" />
         </div>
 
-        {/* Message */}
         {text ? (
           <p className="text-sm font-medium text-gray-700">{text}</p>
         ) : (

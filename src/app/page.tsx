@@ -18,7 +18,7 @@ import { SparklesText } from "@/components/ui/sparkles-text";
 import { HyperText } from "@/components/ui/hyper-text";
 import { Marquee } from "@/components/ui/marquee";
 
-// ─── Animated Logo ────────────────────────────────────────────────────────────
+
 function AnimatedLogo({ size = 56 }: { size?: number }) {
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
@@ -34,7 +34,7 @@ function AnimatedLogo({ size = 56 }: { size?: number }) {
   );
 }
 
-// ─── Gradient Text wrapper ────────────────────────────────────────────────────
+
 function GradientText({ children }: { children: React.ReactNode }) {
   return (
     <AnimatedGradientText className="inline px-0 py-0 text-[length:inherit] font-[inherit] leading-[inherit]">
@@ -50,7 +50,7 @@ function GradientText({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Marquee items (only what the app actually has) ───────────────────────────
+
 const MARQUEE_ITEMS = [
   { label: "Canvas", icon: "◻" },
   { label: "Design Tools", icon: "✦" },
@@ -71,7 +71,7 @@ function MarqueeChip({ label, icon }: { label: string; icon: string }) {
   );
 }
 
-// ─── Features ─────────────────────────────────────────────────────────────────
+
 const FEATURES = [
   {
     icon: "✦",
@@ -123,7 +123,7 @@ const FEATURES = [
   },
 ];
 
-// ─── Tech Stack ───────────────────────────────────────────────────────────────
+
 const STACK = [
   {
     name: "Next.js",
@@ -213,7 +213,7 @@ const STACK = [
   },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 export default function LandingPage() {
   const { isSignedIn } = useUser();
   const [scrolled, setScrolled] = useState(false);
@@ -261,15 +261,13 @@ export default function LandingPage() {
       `}</style>
 
       <div className="relative min-h-screen bg-white overflow-x-hidden">
-        {/* ── Background ── */}
-        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
           <div className="absolute inset-0 grid-bg" />
           <div className="blob1 absolute -top-40 -left-40 w-[620px] h-[620px] bg-gradient-to-br from-blue-200/50 via-violet-200/30 to-transparent rounded-full blur-3xl" />
           <div className="blob2 absolute -top-10 right-0   w-[500px] h-[500px] bg-gradient-to-bl from-pink-200/40 via-violet-200/20 to-transparent rounded-full blur-3xl" />
           <div className="blob3 absolute top-[60vh] left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-r from-indigo-200/30 via-cyan-200/20 to-pink-200/30 rounded-full blur-3xl" />
         </div>
 
-        {/* ══ NAVBAR ══════════════════════════════════════ */}
         <nav
           className={cn(
             "fixed top-0 inset-x-0 z-50 transition-all duration-300",
@@ -279,7 +277,6 @@ export default function LandingPage() {
           )}
         >
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-            {/* Brand */}
             <div className="flex items-center gap-3">
               <AnimatedLogo size={38} />
               <span
@@ -290,7 +287,6 @@ export default function LandingPage() {
               </span>
             </div>
 
-            {/* Nav links */}
             <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-500">
               <a
                 href="#features"
@@ -309,7 +305,6 @@ export default function LandingPage() {
               </a>
             </div>
 
-            {/* Auth */}
             <div className="flex items-center gap-3">
               <SignInButton mode="modal" fallbackRedirectUrl="/project">
                 <button className="rounded-xl px-5 py-2.5 text-sm font-semibold border border-gray-200 bg-white/80 text-gray-700 hover:bg-white hover:border-blue-300 hover:scale-[1.02] transition-all">
@@ -329,7 +324,6 @@ export default function LandingPage() {
           </div>
         </nav>
 
-        {/* ══ HERO ════════════════════════════════════════ */}
         <section className="relative z-10 pt-32 pb-16 px-6 flex flex-col items-center text-center min-h-screen justify-center">
           <Particles
             className="absolute inset-0 pointer-events-none"
@@ -337,7 +331,6 @@ export default function LandingPage() {
             color="#8B5CF6"
           />
 
-          {/* Badge */}
           <div className="hero-1 mb-8">
             <AnimatedGradientText>
               <span className="text-xs font-bold tracking-widest uppercase">
@@ -346,19 +339,16 @@ export default function LandingPage() {
             </AnimatedGradientText>
           </div>
 
-          {/* Logo large */}
           <div className="hero-2 mb-10 relative">
             <div className="absolute -inset-8 rounded-3xl bg-gradient-to-r from-blue-100 via-violet-100 to-pink-100 blur-2xl opacity-60 animate-pulse" />
             <AnimatedLogo size={96} />
           </div>
 
-          {/* Headline */}
           <h1 className="hero-3 text-5xl md:text-7xl font-black tracking-tight text-gray-900 leading-[1.05] mb-6 max-w-4xl">
             Design Together, <br className="hidden md:block" />
             <GradientText>In Real Time</GradientText>
           </h1>
 
-          {/* CTAs */}
           <div className="hero-5 flex flex-wrap items-center justify-center gap-4">
             <a
               href="#demo"
@@ -371,7 +361,6 @@ export default function LandingPage() {
             </a>
           </div>
 
-          {/* Social proof */}
           <div className="hero-5 mt-12 flex flex-wrap justify-center gap-8 text-sm text-gray-400">
             <span className="flex items-center gap-1.5">
               <span className="text-yellow-400">★★★★★</span> 4.9/5 rating
@@ -380,7 +369,6 @@ export default function LandingPage() {
             <span>· No credit card required</span>
           </div>
 
-          {/* Scroll cue */}
           <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-gray-300 animate-bounce">
             <div className="w-5 h-8 rounded-full border-2 border-gray-200 flex items-start justify-center pt-1">
               <div className="w-1 h-2 bg-gray-300 rounded-full animate-pulse" />
@@ -388,7 +376,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ══ MARQUEE ═════════════════════════════════════ */}
         <div className="relative z-10 border-y border-gray-100 bg-white/60 backdrop-blur py-4 overflow-hidden">
           <Marquee pauseOnHover className="[--duration:18s]">
             {MARQUEE_ITEMS.map((item) => (
@@ -397,7 +384,6 @@ export default function LandingPage() {
           </Marquee>
         </div>
 
-        {/* ══ STATS ════════════════════════════════════════ */}
         <section className="relative z-10 py-20 px-6">
           <BlurFade inView delay={0.1}>
             <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 bg-white/70 backdrop-blur-md rounded-3xl border border-gray-100 shadow-lg p-10">
@@ -421,7 +407,6 @@ export default function LandingPage() {
           </BlurFade>
         </section>
 
-        {/* ══ FEATURES ════════════════════════════════════ */}
         <section id="features" className="relative z-10 py-24 px-6">
           <div className="max-w-6xl mx-auto">
             <BlurFade inView delay={0.05} className="text-center mb-16">
@@ -481,7 +466,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ══ DEMO VIDEO ══════════════════════════════════ */}
         <section id="demo" className="relative z-10 py-24 px-6 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-white to-violet-50/50 pointer-events-none" />
           <div className="relative max-w-5xl mx-auto">
@@ -499,12 +483,10 @@ export default function LandingPage() {
             </BlurFade>
 
             <BlurFade inView delay={0.15}>
-              {/* ShineBorder wraps the video card */}
               <ShineBorder
                 className="rounded-3xl overflow-hidden bg-white p-0"
                 borderWidth={2}
               >
-                {/* Browser chrome */}
                 <div className="bg-gray-900 px-4 py-3 flex items-center gap-2 border-b border-gray-700">
                   <div className="flex gap-1.5">
                     <div className="w-3 h-3 rounded-full bg-red-400" />
@@ -512,12 +494,10 @@ export default function LandingPage() {
                     <div className="w-3 h-3 rounded-full bg-green-400" />
                   </div>
                   <div className="flex-1 mx-4 rounded-md bg-gray-800 text-gray-400 text-xs px-3 py-1 font-mono">
-                    {/* ← update with your app URL */}
                     canvasflow.app/canvas/demo
                   </div>
                 </div>
 
-                {/* Video — drop your file at /public/demo.mp4 */}
                 <div className="relative bg-gray-950 aspect-video flex items-center justify-center group">
                   <video
                     className="w-full h-full object-cover"
@@ -526,7 +506,6 @@ export default function LandingPage() {
                   >
                     <source src="/demo.mp4" type="video/mp4" />
                   </video>
-                  {/* Placeholder until video loads */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none">
                     <div className="w-20 h-20 rounded-full bg-white/90 flex items-center justify-center shadow-2xl shadow-blue-500/30 group-hover:scale-110 transition-transform duration-300">
                       <span className="text-3xl ml-1 text-gray-800">▶</span>
@@ -541,7 +520,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ══ BUILT WITH ══════════════════════════════════ */}
         <section
           id="built-with"
           className="relative z-10 py-24 px-6 overflow-hidden"
@@ -576,7 +554,6 @@ export default function LandingPage() {
                     <BorderBeam size={200} duration={10} delay={i * 2} />
                     <Meteors number={4} />
                     <div className="relative z-10 flex items-start gap-4">
-                      {/* Logo pill */}
                       <div
                         className={cn(
                           "w-14 h-14 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br shadow-lg",
@@ -604,7 +581,6 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {/* Extra tech chips */}
             <BlurFade
               inView
               delay={0.4}
@@ -631,7 +607,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ══ CTA BANNER ══════════════════════════════════ */}
         <section className="relative z-10 py-16 px-6">
           <BlurFade inView delay={0.1}>
             <div className="max-w-4xl mx-auto rounded-3xl overflow-hidden relative">
@@ -664,7 +639,6 @@ export default function LandingPage() {
           </BlurFade>
         </section>
 
-        {/* ══ FOOTER ══════════════════════════════════════ */}
         <footer className="relative z-10 border-t border-gray-100 bg-white/60 backdrop-blur py-12 px-6">
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row items-center justify-between gap-8">
@@ -703,7 +677,6 @@ export default function LandingPage() {
                 >
                   Built With
                 </a>
-                {/* ↓ Replace with your real links */}
                 <a
                   href="https://github.com/yourusername/canvasflow"
                   target="_blank"

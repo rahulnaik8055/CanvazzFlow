@@ -13,7 +13,7 @@ interface InspectorPanelProps {
   canEdit: boolean;
 }
 
-// Reusable wrapper — greys out the label+input pair when canEdit is false
+
 function Field({
   label,
   canEdit,
@@ -67,7 +67,6 @@ export default function InspectorPanel({
       <h2 className="text-lg font-semibold text-gray-900 mb-4">Properties</h2>
 
       <div className="space-y-4">
-        {/* Shape header row */}
         <div className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
           <span className="text-sm font-medium text-gray-700 capitalize">
             {selectedNode.type}
@@ -98,7 +97,6 @@ export default function InspectorPanel({
           )}
         </div>
 
-        {/* Position */}
         <Field label="Position" canEdit={canEdit}>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -136,7 +134,6 @@ export default function InspectorPanel({
           </div>
         </Field>
 
-        {/* Size */}
         {selectedNode.type !== "circle" && (
           <Field label="Size" canEdit={canEdit}>
             <div className="grid grid-cols-2 gap-2">
@@ -188,7 +185,6 @@ export default function InspectorPanel({
           </Field>
         )}
 
-        {/* Radius */}
         {selectedNode.type === "circle" && (
           <Field label="Radius" canEdit={canEdit}>
             <input
@@ -211,7 +207,6 @@ export default function InspectorPanel({
           </Field>
         )}
 
-        {/* Fill */}
         <Field label="Fill" canEdit={canEdit}>
           <div className="flex gap-2">
             <input
@@ -236,7 +231,6 @@ export default function InspectorPanel({
           </div>
         </Field>
 
-        {/* Stroke */}
         <Field label="Stroke" canEdit={canEdit}>
           <div className="space-y-2">
             <div className="flex gap-2">
@@ -303,7 +297,6 @@ export default function InspectorPanel({
           </div>
         </Field>
 
-        {/* Opacity */}
         <Field label="Opacity" canEdit={canEdit}>
           <div className="flex items-center gap-3">
             <input
@@ -328,7 +321,6 @@ export default function InspectorPanel({
           </div>
         </Field>
 
-        {/* Rotation */}
         <Field label="Rotation" canEdit={canEdit}>
           <div className="flex items-center gap-3">
             <input
@@ -352,7 +344,6 @@ export default function InspectorPanel({
           </div>
         </Field>
 
-        {/* Text properties */}
         {selectedNode.type === "text" && (
           <>
             <Field label="Text content" canEdit={canEdit}>
@@ -411,7 +402,6 @@ export default function InspectorPanel({
           </>
         )}
 
-        {/* Action buttons — hidden entirely for viewers */}
         {canEdit && (
           <div className="pt-4 border-t border-gray-200 space-y-2">
             <button

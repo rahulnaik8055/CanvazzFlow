@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { MousePointer, Copy, Trash2 } from "lucide-react";
+import { MousePointer, Copy, Trash2, Eye } from "lucide-react";
 import { Node } from "@/types/CanvasTypes";
 import { MIN_SIZE } from "@/constants/CanvasConstants";
 
@@ -10,13 +10,40 @@ interface InspectorPanelProps {
   updateNodeProperty: (id: string, property: keyof Node, value: any) => void;
   duplicateShape: () => void;
   deleteShape: () => void;
+  canEdit: boolean;
 }
+
+// Reusable wrapper — greys out the label+input pair when canEdit is false
+function Field({
+  label,
+  canEdit,
+  children,
+}: {
+  label: string;
+  canEdit: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={canEdit ? "" : "opacity-50 pointer-events-none select-none"}
+    >
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputCls =
+  "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400";
 
 export default function InspectorPanel({
   selectedNode,
   updateNodeProperty,
   duplicateShape,
   deleteShape,
+  canEdit,
 }: InspectorPanelProps) {
   if (!selectedNode) {
     return (
@@ -28,7 +55,7 @@ export default function InspectorPanel({
           </div>
           <p className="text-gray-500 text-sm mb-2">No shape selected</p>
           <p className="text-gray-400 text-xs">
-            Click on a shape to edit its properties
+            Click on a shape to inspect its properties
           </p>
         </div>
       </div>
@@ -38,12 +65,15 @@ export default function InspectorPanel({
   return (
     <div className="w-72 bg-white border-l border-gray-200 shadow-sm p-4 mt-14 overflow-y-auto">
       <h2 className="text-lg font-semibold text-gray-900 mb-4">Properties</h2>
+
       <div className="space-y-4">
-        <div className="p-3 bg-gray-50 rounded-lg">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700 capitalize">
-              {selectedNode.type}
-            </span>
+        {/* Shape header row */}
+        <div className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-700 capitalize">
+            {selectedNode.type}
+          </span>
+
+          {canEdit ? (
             <div className="flex gap-1">
               <button
                 onClick={duplicateShape}
@@ -60,20 +90,23 @@ export default function InspectorPanel({
                 <Trash2 size={14} />
               </button>
             </div>
-          </div>
+          ) : (
+            <span className="flex items-center gap-1 text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-md">
+              <Eye size={11} />
+              View only
+            </span>
+          )}
         </div>
 
         {/* Position */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Position
-          </label>
+        <Field label="Position" canEdit={canEdit}>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-500 mb-1">X</label>
               <input
                 type="number"
                 value={Math.round(selectedNode.x)}
+                disabled={!canEdit}
                 onChange={(e) =>
                   updateNodeProperty(
                     selectedNode.id,
@@ -81,7 +114,7 @@ export default function InspectorPanel({
                     parseFloat(e.target.value) || 0,
                   )
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={inputCls}
               />
             </div>
             <div>
@@ -89,6 +122,7 @@ export default function InspectorPanel({
               <input
                 type="number"
                 value={Math.round(selectedNode.y)}
+                disabled={!canEdit}
                 onChange={(e) =>
                   updateNodeProperty(
                     selectedNode.id,
@@ -96,18 +130,15 @@ export default function InspectorPanel({
                     parseFloat(e.target.value) || 0,
                   )
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={inputCls}
               />
             </div>
           </div>
-        </div>
+        </Field>
 
         {/* Size */}
         {selectedNode.type !== "circle" && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Size
-            </label>
+          <Field label="Size" canEdit={canEdit}>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
@@ -117,6 +148,7 @@ export default function InspectorPanel({
                   type="number"
                   min={MIN_SIZE}
                   value={Math.round(selectedNode.width)}
+                  disabled={!canEdit}
                   onChange={(e) =>
                     updateNodeProperty(
                       selectedNode.id,
@@ -127,7 +159,7 @@ export default function InspectorPanel({
                       ),
                     )
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={inputCls}
                 />
               </div>
               <div>
@@ -138,6 +170,7 @@ export default function InspectorPanel({
                   type="number"
                   min={MIN_SIZE}
                   value={Math.round(selectedNode.height)}
+                  disabled={!canEdit}
                   onChange={(e) =>
                     updateNodeProperty(
                       selectedNode.id,
@@ -148,23 +181,21 @@ export default function InspectorPanel({
                       ),
                     )
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={inputCls}
                 />
               </div>
             </div>
-          </div>
+          </Field>
         )}
 
-        {/* Radius for circle */}
+        {/* Radius */}
         {selectedNode.type === "circle" && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Radius
-            </label>
+          <Field label="Radius" canEdit={canEdit}>
             <input
               type="number"
               min={MIN_SIZE / 2}
               value={Math.round(selectedNode.radius)}
+              disabled={!canEdit}
               onChange={(e) =>
                 updateNodeProperty(
                   selectedNode.id,
@@ -175,61 +206,57 @@ export default function InspectorPanel({
                   ),
                 )
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={inputCls}
             />
-          </div>
+          </Field>
         )}
 
-        {/* Fill Color */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fill
-          </label>
-          <div className="space-y-2"> 
-            <div className="flex gap-2">
-              <input
-                type="color"
-                value={selectedNode.fill}
-                onChange={(e) =>
-                  updateNodeProperty(selectedNode.id, "fill", e.target.value)
-                }
-                className="w-16 h-10 border border-gray-300 rounded-lg cursor-pointer"
-              />
-              <input
-                type="text"
-                value={selectedNode.fill}
-                onChange={(e) =>
-                  updateNodeProperty(selectedNode.id, "fill", e.target.value)
-                }
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-                placeholder="#3b82f6"
-              />
-            </div>
+        {/* Fill */}
+        <Field label="Fill" canEdit={canEdit}>
+          <div className="flex gap-2">
+            <input
+              type="color"
+              value={selectedNode.fill}
+              disabled={!canEdit}
+              onChange={(e) =>
+                updateNodeProperty(selectedNode.id, "fill", e.target.value)
+              }
+              className="w-16 h-10 border border-gray-300 rounded-lg cursor-pointer disabled:cursor-not-allowed"
+            />
+            <input
+              type="text"
+              value={selectedNode.fill}
+              disabled={!canEdit}
+              onChange={(e) =>
+                updateNodeProperty(selectedNode.id, "fill", e.target.value)
+              }
+              className={`${inputCls} flex-1 font-mono`}
+              placeholder="#3b82f6"
+            />
           </div>
-        </div>
+        </Field>
 
         {/* Stroke */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Stroke
-          </label>
+        <Field label="Stroke" canEdit={canEdit}>
           <div className="space-y-2">
             <div className="flex gap-2">
               <input
                 type="color"
                 value={selectedNode.stroke}
+                disabled={!canEdit}
                 onChange={(e) =>
                   updateNodeProperty(selectedNode.id, "stroke", e.target.value)
                 }
-                className="w-16 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                className="w-16 h-10 border border-gray-300 rounded-lg cursor-pointer disabled:cursor-not-allowed"
               />
               <input
                 type="text"
                 value={selectedNode.stroke}
+                disabled={!canEdit}
                 onChange={(e) =>
                   updateNodeProperty(selectedNode.id, "stroke", e.target.value)
                 }
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                className={`${inputCls} flex-1 font-mono`}
                 placeholder="#000000"
               />
             </div>
@@ -240,6 +267,7 @@ export default function InspectorPanel({
                 min="0"
                 max="20"
                 value={selectedNode.strokeWidth}
+                disabled={!canEdit}
                 onChange={(e) =>
                   updateNodeProperty(
                     selectedNode.id,
@@ -247,16 +275,17 @@ export default function InspectorPanel({
                     Math.max(0, parseFloat(e.target.value) || 0),
                   )
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={inputCls}
               />
             </div>
             {selectedNode.type === "frame" && (
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Stroke Style
+                  Stroke style
                 </label>
                 <select
                   value={selectedNode.strokeStyle || "solid"}
+                  disabled={!canEdit}
                   onChange={(e) =>
                     updateNodeProperty(
                       selectedNode.id,
@@ -264,7 +293,7 @@ export default function InspectorPanel({
                       e.target.value as "solid" | "dashed",
                     )
                   }
-                  className="w-full px-3 py-2 border border-black rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={inputCls}
                 >
                   <option value="solid">Solid</option>
                   <option value="dashed">Dashed</option>
@@ -272,13 +301,10 @@ export default function InspectorPanel({
               </div>
             )}
           </div>
-        </div>
+        </Field>
 
         {/* Opacity */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Opacity
-          </label>
+        <Field label="Opacity" canEdit={canEdit}>
           <div className="flex items-center gap-3">
             <input
               type="range"
@@ -286,6 +312,7 @@ export default function InspectorPanel({
               max="1"
               step="0.1"
               value={selectedNode.opacity}
+              disabled={!canEdit}
               onChange={(e) =>
                 updateNodeProperty(
                   selectedNode.id,
@@ -293,25 +320,23 @@ export default function InspectorPanel({
                   parseFloat(e.target.value),
                 )
               }
-              className="flex-1"
+              className="flex-1 disabled:cursor-not-allowed"
             />
             <span className="text-sm text-gray-600 w-10 text-right">
               {Math.round(selectedNode.opacity * 100)}%
             </span>
           </div>
-        </div>
+        </Field>
 
         {/* Rotation */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Rotation
-          </label>
+        <Field label="Rotation" canEdit={canEdit}>
           <div className="flex items-center gap-3">
             <input
               type="range"
               min="0"
               max="360"
               value={Math.round(selectedNode.rotation)}
+              disabled={!canEdit}
               onChange={(e) =>
                 updateNodeProperty(
                   selectedNode.id,
@@ -319,41 +344,38 @@ export default function InspectorPanel({
                   parseFloat(e.target.value),
                 )
               }
-              className="flex-1"
+              className="flex-1 disabled:cursor-not-allowed"
             />
             <span className="text-sm text-gray-600 w-10 text-right">
               {Math.round(selectedNode.rotation)}°
             </span>
           </div>
-        </div>
+        </Field>
 
-        {/* Text Properties */}
+        {/* Text properties */}
         {selectedNode.type === "text" && (
           <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Text Content
-              </label>
+            <Field label="Text content" canEdit={canEdit}>
               <textarea
-                value={selectedNode.text}
+                value={selectedNode.text ?? ""}
+                disabled={!canEdit}
                 onChange={(e) =>
                   updateNodeProperty(selectedNode.id, "text", e.target.value)
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className={`${inputCls} resize-none`}
                 rows={3}
                 placeholder="Enter text..."
               />
-            </div>
+            </Field>
+
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Font Size
-                </label>
+              <Field label="Font size" canEdit={canEdit}>
                 <input
                   type="number"
                   min="8"
                   max="200"
                   value={selectedNode.fontSize}
+                  disabled={!canEdit}
                   onChange={(e) =>
                     updateNodeProperty(
                       selectedNode.id,
@@ -361,15 +383,13 @@ export default function InspectorPanel({
                       Math.max(8, parseFloat(e.target.value) || 8),
                     )
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={inputCls}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Font Family
-                </label>
+              </Field>
+              <Field label="Font family" canEdit={canEdit}>
                 <select
                   value={selectedNode.fontFamily}
+                  disabled={!canEdit}
                   onChange={(e) =>
                     updateNodeProperty(
                       selectedNode.id,
@@ -377,7 +397,7 @@ export default function InspectorPanel({
                       e.target.value,
                     )
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={inputCls}
                 >
                   <option value="Inter, system-ui, sans-serif">Inter</option>
                   <option value="Arial, sans-serif">Arial</option>
@@ -386,28 +406,30 @@ export default function InspectorPanel({
                   <option value="Times New Roman, serif">Times</option>
                   <option value="Courier New, monospace">Courier</option>
                 </select>
-              </div>
+              </Field>
             </div>
           </>
         )}
 
-        {/* Action Buttons */}
-        <div className="pt-4 border-t border-gray-200 space-y-2">
-          <button
-            onClick={duplicateShape}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
-          >
-            <Copy size={16} />
-            Duplicate Shape
-          </button>
-          <button
-            onClick={deleteShape}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
-          >
-            <Trash2 size={16} />
-            Delete Shape
-          </button>
-        </div>
+        {/* Action buttons — hidden entirely for viewers */}
+        {canEdit && (
+          <div className="pt-4 border-t border-gray-200 space-y-2">
+            <button
+              onClick={duplicateShape}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+            >
+              <Copy size={16} />
+              Duplicate shape
+            </button>
+            <button
+              onClick={deleteShape}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium"
+            >
+              <Trash2 size={16} />
+              Delete shape
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

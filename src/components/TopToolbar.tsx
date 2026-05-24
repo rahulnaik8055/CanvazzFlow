@@ -12,6 +12,14 @@ import {
   Loader2,
 } from "lucide-react";
 
+type Role = "owner" | "editor" | "viewer";
+
+const ROLE_STYLES: Record<Role, string> = {
+  owner: "bg-amber-50  text-amber-700  border-amber-200",
+  editor: "bg-blue-50   text-blue-700   border-blue-200",
+  viewer: "bg-gray-100  text-gray-500   border-gray-200",
+};
+
 interface TopToolbarProps {
   tool: "select" | "pan";
   setTool: (tool: "select" | "pan") => void;
@@ -24,6 +32,7 @@ interface TopToolbarProps {
   canUndo: boolean;
   canRedo: boolean;
   saveIndicator: "Live" | "Reconnecting" | "Connecting...";
+  role: Role;
   onSave: () => void;
   onBack: () => void;
 }
@@ -40,12 +49,13 @@ export default function TopToolbar({
   canUndo,
   canRedo,
   saveIndicator,
+  role,
   onSave,
   onBack,
 }: TopToolbarProps) {
-  const isSaveInProgress = saveIndicator === "Live";
-  const isSaveDisabled = saveIndicator !== "Live";
-  const saveStatusLabel =
+  const isLive = saveIndicator === "Live";
+
+  const saveLabel =
     saveIndicator === "Live"
       ? "All changes saved"
       : saveIndicator === "Reconnecting"
@@ -53,8 +63,8 @@ export default function TopToolbar({
         : "Connecting...";
 
   return (
-    <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm px-3 z-20 flex items-center justify-between h-15">
-      {/* Left — back + title + tools */}
+    <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm px-3 z-20 flex items-center justify-between h-14">
+      {/* ── Left ──────────────────────────────────── */}
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
@@ -64,10 +74,18 @@ export default function TopToolbar({
           <ArrowLeft size={16} />
         </button>
 
-        <h1 className="text-sm font-semibold text-gray-900">Canvas Editor</h1>
+        <h1 className="text-sm font-semibold text-gray-900">Canvas editor</h1>
+
+        {/* Role badge — always visible */}
+        <span
+          className={`text-xs font-medium px-2 py-0.5 rounded-md border capitalize ${ROLE_STYLES[role]}`}
+        >
+          {role}
+        </span>
 
         <div className="w-px h-5 bg-gray-200 mx-1" />
 
+        {/* Select / Pan — available to all roles */}
         <div className="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
           <button
             onClick={() => setTool("select")}
@@ -94,9 +112,9 @@ export default function TopToolbar({
         </div>
       </div>
 
-      {/* Right — undo/redo + zoom + save */}
+      {/* ── Right ─────────────────────────────────── */}
       <div className="flex items-center gap-3">
-        {/* Undo / Redo */}
+        {/* Undo / Redo — disabled for viewers (canUndo/canRedo already false) */}
         <div className="flex items-center gap-1">
           <button
             onClick={undo}
@@ -118,12 +136,12 @@ export default function TopToolbar({
 
         <div className="w-px h-5 bg-gray-200" />
 
-        {/* Zoom */}
+        {/* Zoom — available to all roles */}
         <div className="flex items-center gap-1">
           <button
             onClick={zoomOut}
             className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            title="Zoom Out"
+            title="Zoom out"
           >
             <ZoomOut size={15} />
           </button>
@@ -133,14 +151,13 @@ export default function TopToolbar({
           <button
             onClick={zoomIn}
             className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            title="Zoom In"
+            title="Zoom in"
           >
             <ZoomIn size={15} />
           </button>
           <button
             onClick={resetView}
             className="px-2.5 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-            title="Reset View"
           >
             Reset
           </button>
@@ -151,25 +168,20 @@ export default function TopToolbar({
         {/* Save status */}
         <button
           onClick={onSave}
-          disabled={isSaveDisabled}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
-            isSaveInProgress
+          disabled={!isLive}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            isLive
               ? "bg-green-100 text-green-700 hover:bg-green-200"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          } disabled:opacity-40 disabled:cursor-not-allowed`}
-          title={saveStatusLabel}
+              : "bg-gray-100 text-gray-600"
+          }`}
+          title={saveLabel}
         >
-          {isSaveInProgress ? (
-            <>
-              <Save size={15} />
-              <span className="text-sm font-medium">{saveStatusLabel}</span>
-            </>
+          {isLive ? (
+            <Save size={15} />
           ) : (
-            <>
-              <Loader2 size={15} className="animate-spin" />
-              <span className="text-sm font-medium">{saveStatusLabel}</span>
-            </>
+            <Loader2 size={15} className="animate-spin" />
           )}
+          <span className="text-sm font-medium">{saveLabel}</span>
         </button>
       </div>
     </div>

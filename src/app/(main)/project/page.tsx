@@ -17,20 +17,10 @@ import {
 } from "@/components/ui/pagination";
 import { SkeletonGrid } from "@/components/custom/SkeletonGrid";
 import { EmptyState } from "@/components/custom/EmptyState";
-import { ProjectCard } from "@/components/project/ProjectCard";
+import { ProjectCard, IProject } from "@/components/project/ProjectCard";
 import { ProjectModal } from "@/components/project/ProjectModal";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRouter } from "next/navigation";
-
-interface IProject {
-  id: string;
-  name: string;
-  description: string | null;
-  thumbnail: string | null;
-  createdAt: string;
-  updatedAt: string;
-  ownerId: string;
-}
 
 interface Meta {
   total: number;
@@ -62,7 +52,7 @@ export default function ProjectsPage() {
       const res = await api.get(
         `project?page=${page}&limit=${LIMIT}&search=${debouncedSearch}`,
       );
-      setProjects(res.data);
+      setProjects(res);
       setMeta(res.meta);
     } catch (err) {
       console.error(err);
@@ -86,6 +76,8 @@ export default function ProjectsPage() {
     setModalOpen(false);
     fetchProjects();
   };
+
+  console.log(projects);
 
   return (
     <div>

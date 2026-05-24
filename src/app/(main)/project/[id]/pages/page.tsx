@@ -155,7 +155,7 @@ export default function PagesPage() {
           {pages.map((p) => (
             <div
               key={p.id}
-              onClick={() => router.push(`/editor/${p.id}`)}
+              onClick={() => router.push(`/editor/${projectId}/page/${p.id}`)}
               className="group bg-white border border-gray-100 rounded-xl p-4 hover:border-gray-300 hover:-translate-y-0.5 transition-all cursor-pointer"
             >
               {/* Thumbnail placeholder */}

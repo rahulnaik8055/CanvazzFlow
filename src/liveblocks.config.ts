@@ -3,7 +3,24 @@ import { createRoomContext } from "@liveblocks/react";
 import { Node } from "@/types/CanvasTypes";
 
 export const client = createClient({
-  publicApiKey: process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY!,
+  authEndpoint: async (room) => {
+    // Plain fetch — no React hooks allowed outside components
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/liveblocks-auth`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ room }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Not authorized to join this room");
+    }
+
+    return response.json();
+  },
 });
 
 type Presence = {
@@ -18,7 +35,12 @@ type Storage = {
 
 type UserMeta = {
   id: string;
-  info: { name: string; color: string };
+  info: {
+    name: string;
+    email: string;
+    color: string;
+    role: "owner" | "editor" | "viewer";
+  };
 };
 
 type RoomEvent = never;
@@ -31,6 +53,7 @@ export const {
   useStorage,
   useMutation,
   useStatus,
+  useSelf,
 } = createRoomContext<Presence, Storage, UserMeta, RoomEvent>(client);
 
-export type { LiveMap } from "@liveblocks/client";
+export type { LiveMap };

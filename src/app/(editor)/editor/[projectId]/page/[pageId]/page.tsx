@@ -1,32 +1,11 @@
-/**
- * EditorPage.tsx
- *
- * What changed from the sync engine version:
- *
- * REMOVED:
- *   - useSyncEngine entirely
- *   - all PATCH API calls from the frontend
- *   - nodesRef, prevNodesRef, delta diff useEffect
- *   - debounce timer, FSM state
- *
- * ADDED:
- *   - RoomProvider wrapping the whole editor
- *   - useStorage to read nodes from Liveblocks
- *   - useMutation to write nodes to Liveblocks
- *   - useMyPresence for cursor broadcasting
- *   - useOthers to render everyone else's cursors
- *
- * The save flow is now:
- *   user action → useMutation → Liveblocks → broadcasts to all users
- *   room empties → Liveblocks webhook → your backend → Postgres
- */
-
+// editor/[projectId]/[pageId]/page.tsx
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Konva from "konva";
 import { useParams, useRouter } from "next/navigation";
 import { useApi } from "@/lib/api";
+import { useAuth } from "@clerk/nextjs";
 
 import {
   RoomProvider,
@@ -37,6 +16,7 @@ import {
   useStatus,
 } from "@/liveblocks.config";
 import { LiveMap } from "@liveblocks/client";
+
 import LoadingOverlay from "@/components/LoadingOverlay";
 import { Node } from "@/types/CanvasTypes";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
@@ -48,28 +28,70 @@ import CanvasArea from "@/components/CanvasArea";
 import LeftSidebar from "@/components/LeftSidebar";
 import TopToolbar from "@/components/TopToolbar";
 import CollaboratorCursors from "@/components/editor/CollaboratorCursors";
+import { RequestAccessModal } from "@/components/requests/RequestAccessModal";
+import { AccessRequestBanner } from "@/components/common/AccessRequestBanner";
 
-// ─── Root — loads nodes then mounts the room ──────────────────────────────────
+type Role = "owner" | "editor" | "viewer";
+
+// ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function EditorPage() {
-  const { pageId } = useParams<{ pageId: string }>();
+  const { pageId, projectId } = useParams<{
+    pageId: string;
+    projectId: string;
+  }>();
   const api = useApi();
+  const { userId } = useAuth();
 
   const [initialNodes, setInitialNodes] = useState<Node[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
+  const [projectName, setProjectName] = useState<string>("");
+  const [accessState, setAccessState] = useState<
+    "loading" | "granted" | "denied" | "error"
+  >("loading");
 
-  // Load nodes from Postgres first.
-  // Once we have them, we pass them into the RoomProvider as initialStorage.
-  // Liveblocks will use them to seed the shared document for this session.
   useEffect(() => {
+    // Check role first — it's the gatekeeper.
+    // Non-members get a 403 here and we stop immediately.
+    // Members proceed to fetch nodes + project name in parallel.
     api
-      .get(`pages/${pageId}/nodes`)
-      .then(setInitialNodes)
-      .catch(() => setLoadError("Failed to load canvas."));
-  }, [pageId]);
+      .get(`project/${projectId}/pages/${pageId}/my-role`)
+      .then(({ role }) => {
+        setRole(role);
+        return Promise.all([
+          api.get(`pages/${pageId}/nodes`),
+          api.get(`project/${projectId}`),
+        ]);
+      })
+      .then(([nodes, project]) => {
+        setInitialNodes(nodes);
+        setProjectName(project.name);
+        setAccessState("granted");
+      })
+      .catch((err) => {
+        setAccessState(err?.status === 403 ? "denied" : "error");
+      });
+  }, [pageId, projectId]);
 
-  if (loadError) return <div>{loadError}</div>;
-  if (!initialNodes) return <LoadingOverlay isLoading />;
+  if (accessState === "loading") return <LoadingOverlay isLoading />;
+
+  if (accessState === "error") {
+    return (
+      <div className="flex h-screen items-center justify-center text-sm text-gray-400">
+        Failed to load canvas.
+      </div>
+    );
+  }
+
+  if (accessState === "denied") {
+    return (
+      <NoAccessScreen
+        projectId={projectId}
+        projectName={projectName}
+        currentUserId={userId!}
+      />
+    );
+  }
 
   return (
     <RoomProvider
@@ -80,27 +102,65 @@ export default function EditorPage() {
         userName: "Anonymous",
       }}
       initialStorage={{
-        // Convert the flat array from Postgres into a LiveMap keyed by node id.
-        // LiveMap is Liveblocks' collaborative Map — every mutation to it
-        // is automatically synced to all users in the room instantly.
-        nodes: new LiveMap(initialNodes.map((n) => [n.id, n])),
+        nodes: new LiveMap(initialNodes!.map((n) => [n.id, n])),
       }}
     >
-      <Editor pageId={pageId} />
+      <Editor projectId={projectId} role={role!} canEdit={role !== "viewer"} />
     </RoomProvider>
   );
 }
 
-// ─── Editor — the actual canvas, now reading from Liveblocks ─────────────────
+// ─── No access screen ─────────────────────────────────────────────────────────
 
-function Editor({ pageId }: { pageId: string }) {
+function NoAccessScreen({
+  projectId,
+  projectName,
+  currentUserId,
+}: {
+  projectId: string;
+  projectName: string;
+  currentUserId: string;
+}) {
   const router = useRouter();
 
-  // Read nodes directly from Liveblocks shared storage.
-  // This re-renders whenever any user in the room changes any node.
-  // No polling, no websocket management — Liveblocks handles it.
+  return (
+    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-gray-50">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <p className="text-sm font-medium text-gray-900">
+          You don't have access to this canvas
+        </p>
+        <p className="text-xs text-gray-400">
+          Ask the owner to invite you, or request access below.
+        </p>
+      </div>
 
-  // Convert LiveMap → array for Konva (which expects an array)
+      <RequestAccessModal
+        projectId={projectId}
+        projectName={projectName}
+        currentUserId={currentUserId}
+      />
+
+      <button
+        onClick={() => router.push("/dashboard")}
+        className="rounded-lg bg-gray-900 px-4 py-2 text-xs text-white hover:bg-gray-700 transition-colors"
+      >
+        Go to dashboard
+      </button>
+    </div>
+  );
+}
+
+// ─── Editor ───────────────────────────────────────────────────────────────────
+
+interface EditorProps {
+  projectId: string;
+  role: Role;
+  canEdit: boolean;
+}
+
+function Editor({ projectId, role, canEdit }: EditorProps) {
+  const router = useRouter();
+
   const nodes =
     useStorage((root) =>
       root.nodes ? (Object.values(root.nodes) as Node[]) : ([] as Node[]),
@@ -108,7 +168,7 @@ function Editor({ pageId }: { pageId: string }) {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tool, setTool] = useState<"select" | "pan">("select");
-  const [stageScale, setStageScale] = useState<number>(1);
+  const [stageScale, setStageScale] = useState(1);
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const [isDraggingStage, setIsDraggingStage] = useState(false);
   const [lastPointerPosition, setLastPointerPosition] = useState({
@@ -122,7 +182,8 @@ function Editor({ pageId }: { pageId: string }) {
   const transformerRef = useRef<Konva.Transformer>(null);
   const stageRef = useRef<Konva.Stage>(null) as React.RefObject<Konva.Stage>;
 
-  // Connection status — show "Connecting..." while Liveblocks is establishing
+  // ─── Liveblocks ─────────────────────────────────────────────────────────────
+
   const status = useStatus();
   const saveIndicator =
     status === "connected"
@@ -131,31 +192,60 @@ function Editor({ pageId }: { pageId: string }) {
         ? "Reconnecting"
         : "Connecting...";
 
-  // My presence — broadcasts my cursor position and selection to others
   const [, updateMyPresence] = useMyPresence();
-
-  // Others' presence — render their cursors on the canvas
   const others = useOthers();
 
-  // ─── Liveblocks mutations ──────────────────────────────────────────────────
-  //
-  // useMutation gives us a function that writes to shared Storage.
-  // Every call is:
-  //   1. Applied locally immediately (optimistic)
-  //   2. Broadcast to all other users in the room
-  //   3. Confirmed by Liveblocks server
-  //
-  // This replaces every api.patch() call from the sync engine.
+  // ─── Mutations ───────────────────────────────────────────────────────────────
 
-  const upsertNode = useMutation(({ storage }, node: Node) => {
+  const _upsertNode = useMutation(({ storage }, node: Node) => {
     storage.get("nodes").set(node.id, node);
   }, []);
 
-  const deleteNode = useMutation(({ storage }, id: string) => {
+  const _deleteNode = useMutation(({ storage }, id: string) => {
     storage.get("nodes").delete(id);
   }, []);
 
-  // ─── Shape actions — now call Liveblocks mutations ─────────────────────────
+  // Wrap with canEdit guard — viewers call these freely, they just no-op
+  const upsertNode = useCallback(
+    (node: Node) => {
+      if (canEdit) _upsertNode(node);
+    },
+    [canEdit, _upsertNode],
+  );
+
+  const deleteNode = useCallback(
+    (id: string) => {
+      if (canEdit) _deleteNode(id);
+    },
+    [canEdit, _deleteNode],
+  );
+
+  // ─── Sync helper ─────────────────────────────────────────────────────────────
+
+  const syncSetNodes = useCallback(
+    (updater: Node[] | ((prev: Node[]) => Node[])) => {
+      if (!canEdit) return;
+
+      const nextNodes =
+        typeof updater === "function" ? updater(nodes) : updater;
+      const prevMap = new Map(nodes.map((n) => [n.id, n]));
+      const nextMap = new Map(nextNodes.map((n) => [n.id, n]));
+
+      nextNodes.forEach((node) => {
+        const prev = prevMap.get(node.id);
+        if (!prev || JSON.stringify(prev) !== JSON.stringify(node)) {
+          upsertNode(node);
+        }
+      });
+
+      nodes.forEach((node) => {
+        if (!nextMap.has(node.id)) deleteNode(node.id);
+      });
+    },
+    [nodes, upsertNode, deleteNode, canEdit],
+  );
+
+  // ─── History ─────────────────────────────────────────────────────────────────
 
   const {
     saveToHistory,
@@ -165,34 +255,7 @@ function Editor({ pageId }: { pageId: string }) {
     history,
   } = useCanvasHistory(nodes);
 
-  // useShapeActions still manages local state for the canvas,
-  // but after each action we also push to Liveblocks so other users see it.
-  // We pass a no-op setNodes since nodes now come from Liveblocks storage.
-  // Replace noopSetNodes with this
-  const syncSetNodes = useCallback(
-    (updater: Node[] | ((prev: Node[]) => Node[])) => {
-      // resolve the new state — useShapeActions sometimes passes a function
-      const nextNodes =
-        typeof updater === "function" ? updater(nodes) : updater;
-
-      const prevMap = new Map(nodes.map((n) => [n.id, n]));
-      const nextMap = new Map(nextNodes.map((n) => [n.id, n]));
-
-      // upsert anything added or changed
-      nextNodes.forEach((node) => {
-        const prev = prevMap.get(node.id);
-        if (!prev || JSON.stringify(prev) !== JSON.stringify(node)) {
-          upsertNode(node);
-        }
-      });
-
-      // delete anything removed
-      nodes.forEach((node) => {
-        if (!nextMap.has(node.id)) deleteNode(node.id);
-      });
-    },
-    [nodes, upsertNode, deleteNode],
-  );
+  // ─── Shape actions ───────────────────────────────────────────────────────────
 
   const { addShape, duplicateShape, deleteShape, updateNodeProperty } =
     useShapeActions(
@@ -207,56 +270,54 @@ function Editor({ pageId }: { pageId: string }) {
       setError,
     );
 
-  // Wrap each action to also push the result to Liveblocks.
-  // After the local action runs, we sync the affected nodes.
-
   const addShapeAndSync = useCallback(
     (...args: Parameters<typeof addShape>) => {
+      if (!canEdit) return;
       addShape(...args);
-      // addShape internally creates a new node — we need to find it
-      // The cleanest way is to return the new node from addShape (refactor if needed)
-      // For now: sync all nodes after a short yield
       setTimeout(() => nodes.forEach(upsertNode), 0);
     },
-    [addShape, nodes, upsertNode],
+    [addShape, nodes, upsertNode, canEdit],
   );
 
   const deleteShapeAndSync = useCallback(
     (id: string | null) => {
-      if (!id) return;
+      if (!id || !canEdit) return;
       deleteShape(id);
       deleteNode(id);
       setSelectedId(null);
       updateMyPresence({ selectedId: null });
     },
-    [deleteShape, deleteNode, updateMyPresence],
+    [deleteShape, deleteNode, updateMyPresence, canEdit],
   );
 
   const duplicateShapeAndSync = useCallback(
     (id: string | null) => {
-      if (!id) return;
+      if (!id || !canEdit) return;
       duplicateShape(id);
       setTimeout(() => nodes.forEach(upsertNode), 0);
     },
-    [duplicateShape, nodes, upsertNode],
+    [duplicateShape, nodes, upsertNode, canEdit],
   );
 
   const updatePropertyAndSync = useCallback(
     (...args: Parameters<typeof updateNodeProperty>) => {
+      if (!canEdit) return;
       updateNodeProperty(...args);
       const [id] = args;
       const updated = nodes.find((n) => n.id === id);
       if (updated) upsertNode(updated);
     },
-    [updateNodeProperty, nodes, upsertNode],
+    [updateNodeProperty, nodes, upsertNode, canEdit],
   );
 
-  // ─── Canvas interactions ───────────────────────────────────────────────────
+  // ─── View controls ───────────────────────────────────────────────────────────
 
   const { zoomIn, zoomOut, resetView } = useViewControls(
     setStageScale,
     setStagePosition,
   );
+
+  // ─── Canvas interactions ─────────────────────────────────────────────────────
 
   const {
     handleSelect,
@@ -285,41 +346,36 @@ function Editor({ pageId }: { pageId: string }) {
     tool,
   );
 
-  // On dragend, push moved node positions to Liveblocks
   const handleDragAndSync = useCallback(
     (...args: Parameters<typeof handleDrag>) => {
+      if (!canEdit) return;
       handleDrag(...args);
       const event = args[0] as any;
       if (event?.type === "dragend") {
         setTimeout(() => nodes.forEach(upsertNode), 0);
       }
     },
-    [handleDrag, nodes, upsertNode],
+    [handleDrag, nodes, upsertNode, canEdit],
   );
 
-  // On transform end, push resized/rotated node to Liveblocks
   const handleTransformEndAndSync = useCallback(
     (...args: Parameters<typeof handleTransformEnd>) => {
+      if (!canEdit) return;
       handleTransformEnd(...args);
       setTimeout(() => nodes.forEach(upsertNode), 0);
     },
-    [handleTransformEnd, nodes, upsertNode],
+    [handleTransformEnd, nodes, upsertNode, canEdit],
   );
 
-  // ─── Selection presence ────────────────────────────────────────────────────
-  // Broadcast my selected shape to other users so they can see what I have selected
+  // ─── Presence ────────────────────────────────────────────────────────────────
 
   const handleSelectAndBroadcast = useCallback(
     (...args: Parameters<typeof handleSelect>) => {
       handleSelect(...args);
-      const id = args[0] as string | null;
-      updateMyPresence({ selectedId: id });
+      updateMyPresence({ selectedId: args[0] as string | null });
     },
     [handleSelect, updateMyPresence],
   );
-
-  // ─── Cursor presence ───────────────────────────────────────────────────────
-  // Broadcast my cursor position to others on every mouse move
 
   const handleMouseMoveForCursor = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -334,9 +390,11 @@ function Editor({ pageId }: { pageId: string }) {
     updateMyPresence({ cursor: null });
   }, [updateMyPresence]);
 
-  // ─── Keyboard shortcuts ────────────────────────────────────────────────────
+  // ─── Keyboard shortcuts ───────────────────────────────────────────────────────
 
   useEffect(() => {
+    if (!canEdit) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       switch (e.key) {
@@ -360,17 +418,20 @@ function Editor({ pageId }: { pageId: string }) {
           break;
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
+    canEdit,
     selectedId,
     historyUndo,
     historyRedo,
+    syncSetNodes,
     duplicateShapeAndSync,
     deleteShapeAndSync,
   ]);
 
-  // ─── Canvas size ───────────────────────────────────────────────────────────
+  // ─── Canvas size ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
     const update = () =>
@@ -383,7 +444,7 @@ function Editor({ pageId }: { pageId: string }) {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // ─── Transformer ───────────────────────────────────────────────────────────
+  // ─── Transformer ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (
@@ -402,6 +463,8 @@ function Editor({ pageId }: { pageId: string }) {
 
   const selectedNode = nodes.find((n) => n.id === selectedId) || null;
 
+  // ─── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-50 font-sans">
       <TopToolbar
@@ -413,10 +476,11 @@ function Editor({ pageId }: { pageId: string }) {
         zoomOut={zoomOut}
         resetView={resetView}
         stageScale={stageScale}
-        canUndo={historyStep > 0}
-        canRedo={historyStep < history.length - 1}
+        canUndo={canEdit && historyStep > 0}
+        canRedo={canEdit && historyStep < history.length - 1}
         saveIndicator={saveIndicator}
-        onSave={() => {}} // no manual save needed — Liveblocks + webhook handles it
+        role={role}
+        onSave={() => {}}
         onBack={() => router.back()}
       />
 
@@ -442,9 +506,9 @@ function Editor({ pageId }: { pageId: string }) {
           stageRef={stageRef}
           transformerRef={transformerRef}
           handleSelect={handleSelectAndBroadcast}
-          handleDrag={handleDragAndSync}
-          handleTransform={handleTransform}
-          handleTransformEnd={handleTransformEndAndSync}
+          handleDrag={canEdit ? handleDragAndSync : () => {}}
+          handleTransform={canEdit ? handleTransform : () => {}}
+          handleTransformEnd={canEdit ? handleTransformEndAndSync : () => {}}
           handleWheel={handleWheel}
           handleStageMouseDown={handleStageMouseDown}
           handleStageMouseMove={handleMouseMoveForCursor}
@@ -452,7 +516,6 @@ function Editor({ pageId }: { pageId: string }) {
           onMouseLeave={handleMouseLeaveForCursor}
         />
 
-        {/* Render other users' cursors on top of the canvas */}
         <CollaboratorCursors
           others={others}
           stageScale={stageScale}
@@ -465,7 +528,11 @@ function Editor({ pageId }: { pageId: string }) {
         updateNodeProperty={updatePropertyAndSync}
         duplicateShape={() => duplicateShapeAndSync(selectedId)}
         deleteShape={() => deleteShapeAndSync(selectedId)}
+        canEdit={canEdit}
       />
+
+      {/* Only the owner approves/denies access requests */}
+      {role === "owner" && <AccessRequestBanner projectId={projectId} />}
     </div>
   );
 }

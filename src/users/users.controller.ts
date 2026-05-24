@@ -9,7 +9,7 @@ const clerk = createClerkClient({
 });
 
 @Controller('users')
-@UseGuards(ClerkAuthGuard) // all routes here require a valid Clerk token
+@UseGuards(ClerkAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -18,7 +18,6 @@ export class UsersController {
   async syncUser(@Req() req: Request) {
     const clerkUserId = req['userId'];
 
-    // Fetch full user data from Clerk
     const clerkUser = await clerk.users.getUser(clerkUserId);
 
     return this.usersService.upsertUser({

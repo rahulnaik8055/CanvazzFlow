@@ -1,22 +1,3 @@
-/**
- * nodes.controller.ts
- *
- * Three endpoints:
- *
- * GET  /pages/:pageId/nodes
- *   — loads nodes from Postgres for initial canvas seed
- *   — called once when EditorPage mounts, before the Liveblocks room opens
- *
- * POST /pages/:pageId/nodes
- *   — full replace, used only for initial page creation
- *
- * POST /webhooks/liveblocks
- *   — called by Liveblocks when a room event occurs
- *   — we only care about "storageUpdated" (room emptied, final state available)
- *   — verifies signature, extracts nodes, writes to Postgres
- *   — this is how your database stays in sync without any frontend PATCH calls
- */
-
 import {
   Controller,
   Get,

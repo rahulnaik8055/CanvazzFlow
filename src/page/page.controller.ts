@@ -59,7 +59,6 @@ export class PageController {
     return this.pageService.deletePage(projectId, pageId, req['userId']);
   }
 
-  // pages.controller.ts — add this alongside your existing nodes endpoint
   @Get(':pageId/my-role')
   getMyRole(@Param('pageId') pageId: string, @Req() req) {
     return this.pageService.getMyRole(pageId, req['userId']);

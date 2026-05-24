@@ -38,7 +38,6 @@ export class AccessRequestsController {
     return this.svc.respond(id, req['userId'], body.approved);
   }
 
-  // Only owners/editors can list pending requests
   @Get('pending')
   pending(@Req() req) {
     return this.svc.getAllPendingForOwner(req['userId']);

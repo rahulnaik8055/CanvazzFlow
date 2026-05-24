@@ -1,24 +1,3 @@
-/**
- * liveblocks-auth.controller.ts
- *
- * THE SECURITY GATE.
- *
- * This replaces the public API key in your frontend config.
- * Instead of anyone being able to join any room, Liveblocks calls
- * this endpoint first and only issues a token if we say yes.
- *
- * Flow:
- *   1. User opens editor → Liveblocks client needs a token
- *   2. Liveblocks client calls POST /liveblocks-auth (your backend)
- *   3. We check: is this user a ProjectMember for this room's project?
- *   4. Yes → issue a signed session token with their name + color
- *   5. No  → 403, Liveblocks rejects the connection
- *
- * Room naming convention: "page-{pageId}"
- * We extract the pageId, look up which project it belongs to,
- * then check ProjectMember.
- */
-
 import {
   Controller,
   Post,
@@ -48,19 +27,16 @@ export class LiveblocksAuthController {
   async auth(@Body() body: { room: string }, @Req() req: Request) {
     const { room } = body;
 
-    // Step 1: extract pageId from room name
     const pageIdMatch = room.match(/^page-(.+)$/);
     if (!pageIdMatch) throw new ForbiddenException('Invalid room format');
     const pageId = pageIdMatch[1];
 
-    // Step 2: find which project this page belongs to
     const page = await this.prisma.page.findUnique({
       where: { id: pageId },
       select: { projectId: true },
     });
     if (!page) throw new ForbiddenException('Page not found');
 
-    // Step 3: check if user is a member of that project
     const membership = await this.prisma.projectMember.findUnique({
       where: {
         projectId_userId: {

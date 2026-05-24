@@ -33,7 +33,6 @@ export class ProjectsController {
     return this.projectsService.getMyProjects(req['userId']);
   }
 
-  // /projects/search?q=whiteboard
   @Get('search')
   searchProjects(@Req() req: Request, @Query('q') query: string = '') {
     return this.projectsService.searchProjects(req['userId'], query);

@@ -1,4 +1,3 @@
-// liveblocks.service.ts
 import {
   Injectable,
   UnauthorizedException,
@@ -21,7 +20,6 @@ export class LiveblocksService {
     );
   }
 
-  // --- existing method, untouched ---
   verifyWebhook(
     rawBody: Buffer,
     headers: Record<string, string>,
@@ -36,13 +34,11 @@ export class LiveblocksService {
     }
   }
 
-  // --- existing method, untouched ---
   extractPageId(roomId: string): string | null {
     const match = roomId.match(/^page-(.+)$/);
     return match ? match[1] : null;
   }
 
-  // --- new: called by the controller's auth endpoint ---
   async authorizeUser(userId: string, roomId: string) {
     const pageId = this.extractPageId(roomId);
     if (!pageId) throw new ForbiddenException('Invalid room id format');
@@ -85,7 +81,6 @@ export class LiveblocksService {
       },
     });
 
-    // Viewers get read-only; editors and owners get full access
     if (role === 'viewer') {
       session.allow(roomId, session.READ_ACCESS);
     } else {

@@ -10,8 +10,6 @@ import { ProjectVisibility } from 'generated/prisma/enums';
 export class ProjectsService {
   constructor(private prisma: PrismaService) {}
 
-  // ─── Create ───────────────────────────────────────────────────────────────
-
   async createProject(
     userId: string,
     dto: { name: string; description?: string; visibility?: ProjectVisibility },
@@ -26,7 +24,6 @@ export class ProjectsService {
         },
       });
 
-      // Owner is also a member — one table for all access checks
       await tx.projectMember.create({
         data: { projectId: project.id, userId, role: 'owner' },
       });
@@ -35,15 +32,12 @@ export class ProjectsService {
     });
   }
 
-  // ─── My projects ──────────────────────────────────────────────────────────
-
   async getMyProjects(userId: string) {
     const memberships = await this.prisma.projectMember.findMany({
       where: { userId },
       include: {
         project: {
           include: {
-            // Your schema names this relation "User" not "owner"
             User: { select: { id: true, firstName: true, lastName: true } },
             _count: { select: { members: true } },
           },
@@ -58,8 +52,6 @@ export class ProjectsService {
       memberCount: m.project._count.members,
     }));
   }
-
-  // ─── Search public projects ───────────────────────────────────────────────
 
   async searchProjects(userId: string, query: string) {
     const existingMembershipIds = await this.prisma.projectMember
@@ -80,7 +72,6 @@ export class ProjectsService {
         name: { contains: query, mode: 'insensitive' },
       },
       include: {
-        // "User" not "owner"
         User: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { members: true } },
       },
@@ -94,8 +85,6 @@ export class ProjectsService {
       requestPending: pendingRequestIds.includes(p.id),
     }));
   }
-
-  // ─── Get single project ───────────────────────────────────────────────────
 
   async getProject(projectId: string, userId: string) {
     const membership = await this.prisma.projectMember.findUnique({
@@ -125,8 +114,6 @@ export class ProjectsService {
     });
   }
 
-  // ─── Delete ───────────────────────────────────────────────────────────────
-
   async deleteProject(projectId: string, userId: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
@@ -137,8 +124,6 @@ export class ProjectsService {
 
     return this.prisma.project.delete({ where: { id: projectId } });
   }
-
-  // ─── Membership check (used by Liveblocks auth) ───────────────────────────
 
   async isMember(projectId: string, userId: string): Promise<boolean> {
     const membership = await this.prisma.projectMember.findUnique({

@@ -1,4 +1,3 @@
-// src/project-members/project-members.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -45,7 +44,6 @@ export class ProjectMembersService {
       }),
     ]);
 
-    // Return owner first with synthetic role
     return [
       { ...owner!.User, role: MemberRole.owner, joinedAt: owner!.createdAt },
       ...members.map((m) => ({

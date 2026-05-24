@@ -20,7 +20,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private userSockets = new Map<string, Set<string>>();
 
   async handleConnection(client: Socket) {
-    // Token is sent from the client as: io(url, { auth: { token } })
     const token = client.handshake.auth?.token as string | undefined;
 
     if (!token) {
@@ -32,8 +31,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const payload = await verifyToken(token, {
         secretKey: process.env.CLERK_SECRET_KEY!,
       });
-
-      // Store verified userId on the socket — register message no longer needed
       const userId = payload.sub;
       client.data.userId = userId;
 
@@ -42,7 +39,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       this.userSockets.get(userId)!.add(client.id);
     } catch {
-      // Invalid or expired token — reject the connection
       client.disconnect();
     }
   }
@@ -55,9 +51,6 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
     sockets.delete(client.id);
     if (sockets.size === 0) this.userSockets.delete(userId);
   }
-
-  // Register message no longer needed — userId comes from verified token on connect
-  // Keeping it as a no-op so old clients don't break during deploys
   @SubscribeMessage('register')
   register(
     @ConnectedSocket() client: Socket,

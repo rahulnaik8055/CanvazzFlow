@@ -35,10 +35,8 @@ export class LiveblocksController {
       req.headers as Record<string, string>,
     );
 
-    // Handle specific events here
     switch (event.type) {
       case 'storageUpdated':
-        // e.g. sync canvas to your DB
         break;
       case 'userEntered':
         break;

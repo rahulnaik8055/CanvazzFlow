@@ -1,4 +1,3 @@
-// src/access-requests/access-requests.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -32,7 +31,6 @@ export class AccessRequestsService {
     });
     if (alreadyMember) throw new ConflictException('Already a member');
 
-    // Upsert so denied users can re-request
     const request = await this.prisma.accessRequest.upsert({
       where: { projectId_userId: { projectId, userId } },
       update: { status: 'pending', message, updatedAt: new Date() },
@@ -51,7 +49,6 @@ export class AccessRequestsService {
       },
     });
 
-    // Push to owner in real time
     this.gateway.notifyUser(project.ownerId, 'access-request', {
       requestId: request.id,
       projectId: project.id,
@@ -94,13 +91,12 @@ export class AccessRequestsService {
           data: {
             projectId: request.projectId,
             userId: request.userId,
-            role: MemberRole.editor, // default role on join
+            role: MemberRole.editor,
           },
         });
       }
     });
 
-    // Notify the requester instantly
     this.gateway.notifyUser(request.userId, 'access-request-response', {
       requestId,
       projectId: request.projectId,
@@ -111,7 +107,6 @@ export class AccessRequestsService {
     return { ok: true };
   }
 
-  // access-requests.service.ts — add this method
   async getAllPendingForOwner(ownerId: string) {
     return this.prisma.accessRequest.findMany({
       where: {

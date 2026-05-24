@@ -34,14 +34,12 @@ export class ProjectRoleGuard implements CanActivate {
 
     const req = ctx.switchToHttp().getRequest();
     const userId: string = req.user?.id;
-    // Works for both /projects/:projectId/... and body.projectId
     const projectId: string = req.params.projectId ?? req.body?.projectId;
 
     if (!userId || !projectId) {
       throw new ForbiddenException('Missing auth or project context');
     }
 
-    // Owner always passes
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: { ownerId: true },
@@ -66,7 +64,7 @@ export class ProjectRoleGuard implements CanActivate {
       );
     }
 
-    req.projectRole = member.role; // available downstream
+    req.projectRole = member.role;
     return true;
   }
 }

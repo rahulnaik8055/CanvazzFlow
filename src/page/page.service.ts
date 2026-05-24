@@ -130,7 +130,6 @@ export class PageService {
       select: { role: true },
     });
 
-    // 403 so the frontend treats it as "denied", not a generic error
     if (!member) throw new ForbiddenException('No access to this page');
 
     return { role: member.role };

@@ -15,9 +15,6 @@ dotenv.config();
 export class ClerkAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-
-    // Try Authorization header first, fall back to __session cookie
-    // Liveblocks auth sends credentials: "include" (cookies) but no header
     const token =
       request.headers.authorization?.split(' ')[1] ??
       request.cookies?.['__session'];

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useApi } from "@/lib/api";
+import { toast } from "sonner";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { RefreshCw } from "lucide-react";
@@ -56,6 +57,7 @@ export default function ProjectsPage() {
       setMeta(res.meta);
     } catch (err) {
       console.error(err);
+      toast.error("Failed to load projects");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -72,9 +74,15 @@ export default function ProjectsPage() {
   }, [fetchProjects]);
 
   const handleCreate = async (data: { name: string; description: string }) => {
-    await api.post("project", data);
-    setModalOpen(false);
-    fetchProjects();
+    try {
+      await api.post("project", data);
+      toast.success("Project created successfully");
+      setModalOpen(false);
+      fetchProjects();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create project");
+    }
   };
 
   console.log(projects);

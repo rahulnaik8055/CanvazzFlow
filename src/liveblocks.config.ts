@@ -1,24 +1,31 @@
 import { createClient, LiveMap } from "@liveblocks/client";
 import { createRoomContext } from "@liveblocks/react";
 import { Node } from "@/types/CanvasTypes";
+import { toast } from "sonner";
 
 export const client = createClient({
   authEndpoint: async (room) => {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/liveblocks-auth`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ room }),
-      },
-    );
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/liveblocks-auth`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ room }),
+        },
+      );
 
-    if (!response.ok) {
-      throw new Error("Not authorized to join this room");
+      if (!response.ok) {
+        throw new Error("Not authorized to join this room");
+      }
+
+      return await response.json();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to connect to collaboration session");
+      throw err;
     }
-
-    return response.json();
   },
 });
 

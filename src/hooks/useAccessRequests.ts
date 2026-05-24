@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
 
 export interface AccessRequest {
   id: string;
@@ -44,8 +45,10 @@ export function useAccessRequests() {
       const data = await res.json();
       setRequests(data);
       setError(null);
-    } catch {
+    } catch (err) {
+      console.error(err);
       setError("Could not load requests");
+      toast.error("Could not load pending access requests");
     } finally {
       if (!silent) setLoading(false);
     }
@@ -61,6 +64,7 @@ export function useAccessRequests() {
 
   const approve = useCallback(
     async (requestId: string) => {
+      const targetReq = requests.find((req) => req.id === requestId);
       const prev = requests;
       setRequests((r) => r.filter((req) => req.id !== requestId));
       setActionLoading(requestId);
@@ -71,9 +75,13 @@ export function useAccessRequests() {
           { method: "POST", credentials: "include" },
         );
         if (!res.ok) throw new Error("Failed to approve");
-      } catch {
+        const userName = targetReq?.user?.firstName || targetReq?.user?.email || "user";
+        toast.success(`Approved access for ${userName}`);
+      } catch (err) {
+        console.error(err);
         setRequests(prev);
         setError("Failed to approve — please try again");
+        toast.error("Failed to approve access request");
       } finally {
         setActionLoading(null);
       }
@@ -83,6 +91,7 @@ export function useAccessRequests() {
 
   const deny = useCallback(
     async (requestId: string) => {
+      const targetReq = requests.find((req) => req.id === requestId);
       const prev = requests;
       setRequests((r) => r.filter((req) => req.id !== requestId));
       setActionLoading(requestId);
@@ -93,9 +102,13 @@ export function useAccessRequests() {
           { method: "POST", credentials: "include" },
         );
         if (!res.ok) throw new Error("Failed to deny");
-      } catch {
+        const userName = targetReq?.user?.firstName || targetReq?.user?.email || "user";
+        toast.success(`Denied access for ${userName}`);
+      } catch (err) {
+        console.error(err);
         setRequests(prev);
         setError("Failed to deny — please try again");
+        toast.error("Failed to deny access request");
       } finally {
         setActionLoading(null);
       }

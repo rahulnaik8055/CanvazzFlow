@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApi } from "@/lib/api";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -71,6 +72,7 @@ export default function PagesPage() {
         setMeta(res.meta);
       } catch (err) {
         console.error(err);
+        toast.error("Failed to load pages");
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -87,9 +89,11 @@ export default function PagesPage() {
     setCreating(true);
     try {
       await api.post(`project/${projectId}/pages`);
+      toast.success("Page created successfully");
       fetchPages(true);
     } catch (err) {
       console.error(err);
+      toast.error("Failed to create page");
     } finally {
       setCreating(false);
     }
@@ -105,17 +109,21 @@ export default function PagesPage() {
         prev.map((p) => (p.id === pageId ? { ...p, name: updated.name } : p)),
       );
       setEditingId(null);
+      toast.success("Page renamed successfully");
     } catch (err) {
       console.error(err);
+      toast.error("Failed to rename page");
     }
   };
 
   const handleDelete = async (pageId: string) => {
     try {
       await api.delete(`project/${projectId}/pages/${pageId}`);
+      toast.success("Page deleted successfully");
       fetchPages(true);
     } catch (err) {
       console.error(err);
+      toast.error("Failed to delete page");
     }
   };
 

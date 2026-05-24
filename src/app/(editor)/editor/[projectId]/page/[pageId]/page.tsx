@@ -6,6 +6,7 @@ import Konva from "konva";
 import { useParams, useRouter } from "next/navigation";
 import { useApi } from "@/lib/api";
 import { useAuth } from "@clerk/nextjs";
+import { toast } from "sonner";
 
 import {
   RoomProvider,
@@ -33,8 +34,6 @@ import { AccessRequestBanner } from "@/components/common/AccessRequestBanner";
 
 type Role = "owner" | "editor" | "viewer";
 
-// ─── Root ─────────────────────────────────────────────────────────────────────
-
 export default function EditorPage() {
   const { pageId, projectId } = useParams<{
     pageId: string;
@@ -51,9 +50,6 @@ export default function EditorPage() {
   >("loading");
 
   useEffect(() => {
-    // Check role first — it's the gatekeeper.
-    // Non-members get a 403 here and we stop immediately.
-    // Members proceed to fetch nodes + project name in parallel.
     api
       .get(`project/${projectId}/pages/${pageId}/my-role`)
       .then(({ role }) => {
@@ -70,6 +66,9 @@ export default function EditorPage() {
       })
       .catch((err) => {
         setAccessState(err?.status === 403 ? "denied" : "error");
+        if (err?.status !== 403) {
+          toast.error("Failed to load canvas data");
+        }
       });
   }, [pageId, projectId]);
 
@@ -110,8 +109,6 @@ export default function EditorPage() {
   );
 }
 
-// ─── No access screen ─────────────────────────────────────────────────────────
-
 function NoAccessScreen({
   projectId,
   projectName,
@@ -150,8 +147,6 @@ function NoAccessScreen({
   );
 }
 
-// ─── Editor ───────────────────────────────────────────────────────────────────
-
 interface EditorProps {
   projectId: string;
   role: Role;
@@ -182,8 +177,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   const transformerRef = useRef<Konva.Transformer>(null);
   const stageRef = useRef<Konva.Stage>(null) as React.RefObject<Konva.Stage>;
 
-  // ─── Liveblocks ─────────────────────────────────────────────────────────────
-
   const status = useStatus();
   const saveIndicator =
     status === "connected"
@@ -195,8 +188,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   const [, updateMyPresence] = useMyPresence();
   const others = useOthers();
 
-  // ─── Mutations ───────────────────────────────────────────────────────────────
-
   const _upsertNode = useMutation(({ storage }, node: Node) => {
     storage.get("nodes").set(node.id, node);
   }, []);
@@ -205,7 +196,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     storage.get("nodes").delete(id);
   }, []);
 
-  // Wrap with canEdit guard — viewers call these freely, they just no-op
   const upsertNode = useCallback(
     (node: Node) => {
       if (canEdit) _upsertNode(node);
@@ -219,8 +209,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     },
     [canEdit, _deleteNode],
   );
-
-  // ─── Sync helper ─────────────────────────────────────────────────────────────
 
   const syncSetNodes = useCallback(
     (updater: Node[] | ((prev: Node[]) => Node[])) => {
@@ -245,8 +233,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     [nodes, upsertNode, deleteNode, canEdit],
   );
 
-  // ─── History ─────────────────────────────────────────────────────────────────
-
   const {
     saveToHistory,
     undo: historyUndo,
@@ -254,8 +240,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     historyStep,
     history,
   } = useCanvasHistory(nodes);
-
-  // ─── Shape actions ───────────────────────────────────────────────────────────
 
   const { addShape, duplicateShape, deleteShape, updateNodeProperty } =
     useShapeActions(
@@ -310,14 +294,10 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     [updateNodeProperty, nodes, upsertNode, canEdit],
   );
 
-  // ─── View controls ───────────────────────────────────────────────────────────
-
   const { zoomIn, zoomOut, resetView } = useViewControls(
     setStageScale,
     setStagePosition,
   );
-
-  // ─── Canvas interactions ─────────────────────────────────────────────────────
 
   const {
     handleSelect,
@@ -367,8 +347,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     [handleTransformEnd, nodes, upsertNode, canEdit],
   );
 
-  // ─── Presence ────────────────────────────────────────────────────────────────
-
   const handleSelectAndBroadcast = useCallback(
     (...args: Parameters<typeof handleSelect>) => {
       handleSelect(...args);
@@ -389,8 +367,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   const handleMouseLeaveForCursor = useCallback(() => {
     updateMyPresence({ cursor: null });
   }, [updateMyPresence]);
-
-  // ─── Keyboard shortcuts ───────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!canEdit) return;
@@ -431,8 +407,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     deleteShapeAndSync,
   ]);
 
-  // ─── Canvas size ─────────────────────────────────────────────────────────────
-
   useEffect(() => {
     const update = () =>
       setCanvasSize({
@@ -443,8 +417,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
-
-  // ─── Transformer ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (
@@ -462,8 +434,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   }, [selectedId, nodes, tool]);
 
   const selectedNode = nodes.find((n) => n.id === selectedId) || null;
-
-  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-50 font-sans">
@@ -531,7 +501,6 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
         canEdit={canEdit}
       />
 
-      {/* Only the owner approves/denies access requests */}
       {role === "owner" && <AccessRequestBanner projectId={projectId} />}
     </div>
   );

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSocket } from "@/hooks/useSocket";
 import { useApi } from "@/lib/api";
+import { toast } from "sonner";
 
 type State = "idle" | "sending" | "pending" | "approved" | "denied";
 
@@ -46,11 +47,18 @@ export function RequestAccessModal({
   const sendRequest = useCallback(async () => {
     setState("sending");
 
-    const res = await api.post("access-requests", {
-      projectId,
-      message: message.trim() || undefined,
-    });
-    setState(res.ok ? "pending" : "idle");
+    try {
+      const res = await api.post("access-requests", {
+        projectId,
+        message: message.trim() || undefined,
+      });
+      setState("pending");
+      toast.success("Access request sent successfully");
+    } catch (err) {
+      console.error(err);
+      setState("idle");
+      toast.error("Failed to send access request");
+    }
   }, [projectId, message]);
 
   return (

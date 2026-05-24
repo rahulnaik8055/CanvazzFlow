@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSocket } from "@/hooks/useSocket";
 import { useApi } from "@/lib/api";
+import { toast } from "sonner";
 
 interface PendingRequest {
   requestId: string;
@@ -50,7 +51,10 @@ export function AccessRequestBanner({ projectId }: { projectId: string }) {
     api
       .get(`access-requests/project/${projectId}/pending`)
       .then((data: ApiRequest[]) => setRequests(data.map(toRequest)))
-      .catch(() => {});
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to load access requests");
+      });
   }, [projectId]);
 
 
@@ -73,11 +77,25 @@ export function AccessRequestBanner({ projectId }: { projectId: string }) {
 
 
   const respond = useCallback(async (requestId: string, approved: boolean) => {
+    const targetRequest = requests.find((r) => r.requestId === requestId);
     setRequests((prev) => prev.filter((r) => r.requestId !== requestId));
-    await api.patch(`access-requests/${requestId}/respond`, {
-      approved,
-    });
-  }, []);
+    try {
+      await api.patch(`access-requests/${requestId}/respond`, {
+        approved,
+      });
+      toast.success(
+        approved
+          ? `Approved access for ${targetRequest?.userName ?? "user"}`
+          : `Denied access for ${targetRequest?.userName ?? "user"}`
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update access request");
+      if (targetRequest) {
+        setRequests((prev) => [targetRequest, ...prev]);
+      }
+    }
+  }, [requests]);
 
   if (requests.length === 0) return null;
 

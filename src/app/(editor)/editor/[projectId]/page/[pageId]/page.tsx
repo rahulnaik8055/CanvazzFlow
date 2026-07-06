@@ -23,6 +23,8 @@ import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { useShapeActions } from "@/hooks/useShapeActions";
 import { useCanvasInteractions } from "@/hooks/useCanvasInteractions";
 import { useViewControls } from "@/hooks/useViewControl";
+import { useSnapping } from "@/hooks/useSnapping";
+import { useAlignment } from "@/hooks/useAlignment";
 import InspectorPanel from "@/components/InspectorPanel";
 import CanvasArea from "@/components/CanvasArea";
 import LeftSidebar from "@/components/LeftSidebar";
@@ -171,6 +173,8 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   });
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [showGrid, setShowGrid] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [smartGuides, setSmartGuides] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const transformerRef = useRef<Konva.Transformer>(null);
@@ -293,6 +297,22 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     setStagePosition,
   );
 
+  const { guides, computeSnap, clearGuides, prepareSnapTargets } = useSnapping(
+    snapToGrid,
+    smartGuides,
+  );
+
+  const {
+    alignLeft,
+    alignCenterX,
+    alignRight,
+    alignTop,
+    alignCenterY,
+    alignBottom,
+    distributeHorizontally,
+    distributeVertically,
+  } = useAlignment(nodes, syncSetNodes, saveToHistory);
+
   const {
     handleSelect,
     handleDrag,
@@ -320,12 +340,34 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     tool,
   );
 
+  const handleDragStart = useCallback(
+    (id: string) => {
+      prepareSnapTargets(nodes, id);
+    },
+    [nodes, prepareSnapTargets],
+  );
+
+  const handleDragMove = useCallback(
+    (id: string, e: Konva.KonvaEventObject<DragEvent>) => {
+      if (!canEdit) return;
+      const node = nodes.find((n) => n.id === id);
+      if (!node) return;
+      const snapped = computeSnap(
+        { ...node, x: e.target.x(), y: e.target.y() },
+        nodes,
+      );
+      e.target.position({ x: snapped.x, y: snapped.y });
+    },
+    [nodes, canEdit, computeSnap],
+  );
+
   const handleDragAndSync = useCallback(
     (...args: Parameters<typeof handleDrag>) => {
       if (!canEdit) return;
+      clearGuides();
       handleDrag(...args);
     },
-    [handleDrag, canEdit],
+    [handleDrag, canEdit, clearGuides],
   );
 
   const handleTransformEndAndSync = useCallback(
@@ -441,11 +483,27 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
         role={role}
         onSave={() => {}}
         onBack={() => router.back()}
+        selectedId={selectedId}
+        canEdit={canEdit}
+        alignment={{
+          alignLeft,
+          alignCenterX,
+          alignRight,
+          alignTop,
+          alignCenterY,
+          alignBottom,
+          distributeHorizontally,
+          distributeVertically,
+        }}
       />
 
       <LeftSidebar
         showGrid={showGrid}
         setShowGrid={setShowGrid}
+        snapToGrid={snapToGrid}
+        setSnapToGrid={setSnapToGrid}
+        smartGuides={smartGuides}
+        setSmartGuides={setSmartGuides}
         error={error}
       />
 
@@ -466,6 +524,8 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
           transformerRef={transformerRef}
           handleSelect={handleSelectAndBroadcast}
           handleDrag={canEdit ? handleDragAndSync : () => {}}
+          handleDragStart={handleDragStart}
+          handleDragMove={canEdit ? handleDragMove : () => {}}
           handleTransform={canEdit ? handleTransform : () => {}}
           handleTransformEnd={canEdit ? handleTransformEndAndSync : () => {}}
           handleWheel={handleWheel}
@@ -473,6 +533,7 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
           handleStageMouseMove={handleMouseMoveForCursor}
           handleStageMouseUp={handleStageMouseUp}
           onMouseLeave={handleMouseLeaveForCursor}
+          guides={guides}
         />
 
         <CollaboratorCursors

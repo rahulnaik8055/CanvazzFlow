@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import {
-  Frame as FrameIcon,
   Grid3X3,
+  Magnet,
+  Ruler,
   AlertCircle,
-  RefreshCw,
   ChevronLeft,
   Settings2,
 } from "lucide-react";
@@ -13,12 +13,20 @@ import {
 interface LeftSidebarProps {
   showGrid: boolean;
   setShowGrid: (show: boolean) => void;
+  snapToGrid: boolean;
+  setSnapToGrid: (snap: boolean) => void;
+  smartGuides: boolean;
+  setSmartGuides: (smart: boolean) => void;
   error: string | null;
 }
 
 export default function LeftSidebar({
   showGrid,
   setShowGrid,
+  snapToGrid,
+  setSnapToGrid,
+  smartGuides,
+  setSmartGuides,
   error,
 }: LeftSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
@@ -76,6 +84,52 @@ export default function LeftSidebar({
                 type="checkbox"
                 checked={showGrid}
                 onChange={(e) => setShowGrid(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-4 rounded-full bg-gray-200 peer-checked:bg-blue-500 transition-colors duration-200" />
+              <div className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-4" />
+            </div>
+          </label>
+
+          {/* Snap to Grid toggle */}
+          <label className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer group transition-colors">
+            <div className="flex items-center gap-2 min-w-0">
+              <Magnet
+                size={13}
+                className="text-gray-400 group-hover:text-gray-600 shrink-0 transition-colors"
+              />
+              <span className="text-[13px] text-gray-600 font-medium whitespace-nowrap">
+                Snap to Grid
+              </span>
+            </div>
+            <div className="relative shrink-0">
+              <input
+                type="checkbox"
+                checked={snapToGrid}
+                onChange={(e) => setSnapToGrid(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-4 rounded-full bg-gray-200 peer-checked:bg-blue-500 transition-colors duration-200" />
+              <div className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-4" />
+            </div>
+          </label>
+
+          {/* Smart Guides toggle */}
+          <label className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer group transition-colors">
+            <div className="flex items-center gap-2 min-w-0">
+              <Ruler
+                size={13}
+                className="text-gray-400 group-hover:text-gray-600 shrink-0 transition-colors"
+              />
+              <span className="text-[13px] text-gray-600 font-medium whitespace-nowrap">
+                Smart Guides
+              </span>
+            </div>
+            <div className="relative shrink-0">
+              <input
+                type="checkbox"
+                checked={smartGuides}
+                onChange={(e) => setSmartGuides(e.target.checked)}
                 className="sr-only peer"
               />
               <div className="w-8 h-4 rounded-full bg-gray-200 peer-checked:bg-blue-500 transition-colors duration-200" />

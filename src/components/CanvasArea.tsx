@@ -30,6 +30,7 @@ import {
 
 import { Node } from "@/types/CanvasTypes";
 import { GRID_SIZE, MIN_SIZE } from "@/constants/CanvasConstants";
+import { SnapGuide } from "@/hooks/useSnapping";
 
 interface CanvasAreaProps {
   addShape: (
@@ -50,6 +51,8 @@ interface CanvasAreaProps {
   transformerRef: React.RefObject<Konva.Transformer | null>;
   handleSelect: (id: string | null) => void;
   handleDrag: (id: string, e: Konva.KonvaEventObject<DragEvent>) => void;
+  handleDragStart: (id: string) => void;
+  handleDragMove: (id: string, e: Konva.KonvaEventObject<DragEvent>) => void;
   handleTransform: (id: string, e: Konva.KonvaEventObject<Event>) => void;
   handleTransformEnd: () => void;
   handleWheel: (e: Konva.KonvaEventObject<WheelEvent>) => void;
@@ -57,6 +60,7 @@ interface CanvasAreaProps {
   handleStageMouseMove: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   handleStageMouseUp: () => void;
   onMouseLeave: () => void;
+  guides: SnapGuide[];
 }
 
 const ImageNode = ({ node, commonProps }: { node: Node; commonProps: any }) => {
@@ -141,6 +145,33 @@ export default function CanvasArea(props: CanvasAreaProps) {
     return [...props.nodes].sort((a, b) => a.zIndex - b.zIndex);
   }, [props.nodes]);
 
+  const guideLines = useMemo(() => {
+    if (props.guides.length === 0) return null;
+    const INF = 100000;
+    return props.guides.map((guide, i) => {
+      if (guide.orientation === "vertical") {
+        return (
+          <Line
+            key={`guide-v-${i}`}
+            points={[guide.position, -INF, guide.position, INF]}
+            stroke="#3b82f6"
+            strokeWidth={1}
+            dash={[4, 4]}
+          />
+        );
+      }
+      return (
+        <Line
+          key={`guide-h-${i}`}
+          points={[-INF, guide.position, INF, guide.position]}
+          stroke="#3b82f6"
+          strokeWidth={1}
+          dash={[4, 4]}
+        />
+      );
+    });
+  }, [props.guides]);
+
   return (
     <div className="flex-1 relative bg-gray-50 mt-14 overflow-hidden">
       <Stage
@@ -175,6 +206,9 @@ export default function CanvasArea(props: CanvasAreaProps) {
               draggable: props.tool === "select",
               onClick: () => props.handleSelect(node.id),
               onTap: () => props.handleSelect(node.id),
+              onDragStart: () => props.handleDragStart(node.id),
+              onDragMove: (e: Konva.KonvaEventObject<DragEvent>) =>
+                props.handleDragMove(node.id, e),
               onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) =>
                 props.handleDrag(node.id, e),
               onTransform: (e: Konva.KonvaEventObject<Event>) =>
@@ -269,7 +303,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
             return null;
           })}
 
-          {props.selectedId && props.tool === "select" && (
+            {props.selectedId && props.tool === "select" && (
             <Transformer
               ref={props.transformerRef}
               boundBoxFunc={(oldBox, newBox) => {
@@ -287,6 +321,10 @@ export default function CanvasArea(props: CanvasAreaProps) {
               ]}
             />
           )}
+        </Layer>
+
+        <Layer zIndex={2} listening={false}>
+          {guideLines}
         </Layer>
       </Stage>
 

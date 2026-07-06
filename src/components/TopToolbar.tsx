@@ -10,6 +10,14 @@ import {
   Save,
   ArrowLeft,
   Loader2,
+  AlignStartVertical,
+  AlignCenterVertical,
+  AlignEndVertical,
+  AlignStartHorizontal,
+  AlignCenterHorizontal,
+  AlignEndHorizontal,
+  Columns3,
+  Rows3,
 } from "lucide-react";
 
 type Role = "owner" | "editor" | "viewer";
@@ -19,6 +27,17 @@ const ROLE_STYLES: Record<Role, string> = {
   editor: "bg-blue-50   text-blue-700   border-blue-200",
   viewer: "bg-gray-100  text-gray-500   border-gray-200",
 };
+
+interface AlignmentHandlers {
+  alignLeft: (ids: string[]) => void;
+  alignCenterX: (ids: string[]) => void;
+  alignRight: (ids: string[]) => void;
+  alignTop: (ids: string[]) => void;
+  alignCenterY: (ids: string[]) => void;
+  alignBottom: (ids: string[]) => void;
+  distributeHorizontally: (ids: string[]) => void;
+  distributeVertically: (ids: string[]) => void;
+}
 
 interface TopToolbarProps {
   tool: "select" | "pan";
@@ -35,6 +54,9 @@ interface TopToolbarProps {
   role: Role;
   onSave: () => void;
   onBack: () => void;
+  selectedId: string | null;
+  canEdit: boolean;
+  alignment: AlignmentHandlers;
 }
 
 export default function TopToolbar({
@@ -52,6 +74,9 @@ export default function TopToolbar({
   role,
   onSave,
   onBack,
+  selectedId,
+  canEdit,
+  alignment,
 }: TopToolbarProps) {
   const isLive = saveIndicator === "Live";
 
@@ -107,6 +132,72 @@ export default function TopToolbar({
             <span className="text-sm font-medium">Pan</span>
           </button>
         </div>
+
+        {selectedId && canEdit && (
+          <>
+            <div className="w-px h-5 bg-gray-200 mx-1" />
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={() => alignment.alignLeft([selectedId])}
+                className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                title="Align left"
+              >
+                <AlignStartVertical size={14} />
+              </button>
+              <button
+                onClick={() => alignment.alignCenterX([selectedId])}
+                className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                title="Align center horizontally"
+              >
+                <AlignCenterVertical size={14} />
+              </button>
+              <button
+                onClick={() => alignment.alignRight([selectedId])}
+                className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                title="Align right"
+              >
+                <AlignEndVertical size={14} />
+              </button>
+              <div className="w-px h-4 bg-gray-200 mx-0.5" />
+              <button
+                onClick={() => alignment.alignTop([selectedId])}
+                className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                title="Align top"
+              >
+                <AlignStartHorizontal size={14} />
+              </button>
+              <button
+                onClick={() => alignment.alignCenterY([selectedId])}
+                className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                title="Align center vertically"
+              >
+                <AlignCenterHorizontal size={14} />
+              </button>
+              <button
+                onClick={() => alignment.alignBottom([selectedId])}
+                className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                title="Align bottom"
+              >
+                <AlignEndHorizontal size={14} />
+              </button>
+              <div className="w-px h-4 bg-gray-200 mx-0.5" />
+              <button
+                onClick={() => alignment.distributeHorizontally([selectedId])}
+                className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                title="Distribute horizontally"
+              >
+                <Columns3 size={14} />
+              </button>
+              <button
+                onClick={() => alignment.distributeVertically([selectedId])}
+                className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                title="Distribute vertically"
+              >
+                <Rows3 size={14} />
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="flex items-center gap-3">

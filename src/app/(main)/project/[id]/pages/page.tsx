@@ -37,7 +37,7 @@ interface Meta {
   hasPrev: boolean;
 }
 
-const LIMIT = 12;
+const LIMIT = 8;
 
 export default function PagesPage() {
   const { id: projectId } = useParams<{ id: string }>();

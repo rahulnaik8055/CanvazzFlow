@@ -2,13 +2,22 @@
 
 import { useAccessRequests } from "@/hooks/useAccessRequests";
 import { UserButton } from "@clerk/nextjs";
-import { ChevronLeft, ChevronRight, FolderOpen, Bell } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FolderOpen,
+  Bell,
+  LayoutDashboard,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { RequestsPanel } from "../requests/RequestsPanel";
 
-const NAV_ITEMS = [{ label: "Projects", href: "/project", icon: FolderOpen }];
+const NAV_ITEMS = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Projects", href: "/project", icon: FolderOpen },
+  { label: "Requests", href: "/requests", icon: Bell },
+];
 
 function Sidebar({
   collapsed,

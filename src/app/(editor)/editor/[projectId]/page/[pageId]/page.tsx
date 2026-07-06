@@ -1,4 +1,3 @@
-// editor/[projectId]/[pageId]/page.tsx
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
@@ -258,9 +257,8 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     (...args: Parameters<typeof addShape>) => {
       if (!canEdit) return;
       addShape(...args);
-      setTimeout(() => nodes.forEach(upsertNode), 0);
     },
-    [addShape, nodes, upsertNode, canEdit],
+    [addShape, canEdit],
   );
 
   const deleteShapeAndSync = useCallback(
@@ -278,20 +276,16 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     (id: string | null) => {
       if (!id || !canEdit) return;
       duplicateShape(id);
-      setTimeout(() => nodes.forEach(upsertNode), 0);
     },
-    [duplicateShape, nodes, upsertNode, canEdit],
+    [duplicateShape, canEdit],
   );
 
   const updatePropertyAndSync = useCallback(
     (...args: Parameters<typeof updateNodeProperty>) => {
       if (!canEdit) return;
       updateNodeProperty(...args);
-      const [id] = args;
-      const updated = nodes.find((n) => n.id === id);
-      if (updated) upsertNode(updated);
     },
-    [updateNodeProperty, nodes, upsertNode, canEdit],
+    [updateNodeProperty, canEdit],
   );
 
   const { zoomIn, zoomOut, resetView } = useViewControls(
@@ -330,21 +324,16 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     (...args: Parameters<typeof handleDrag>) => {
       if (!canEdit) return;
       handleDrag(...args);
-      const event = args[0] as any;
-      if (event?.type === "dragend") {
-        setTimeout(() => nodes.forEach(upsertNode), 0);
-      }
     },
-    [handleDrag, nodes, upsertNode, canEdit],
+    [handleDrag, canEdit],
   );
 
   const handleTransformEndAndSync = useCallback(
     (...args: Parameters<typeof handleTransformEnd>) => {
       if (!canEdit) return;
       handleTransformEnd(...args);
-      setTimeout(() => nodes.forEach(upsertNode), 0);
     },
-    [handleTransformEnd, nodes, upsertNode, canEdit],
+    [handleTransformEnd, canEdit],
   );
 
   const handleSelectAndBroadcast = useCallback(

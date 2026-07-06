@@ -111,6 +111,25 @@ export class ProjectsController {
     return this.projectsService.toggleArchiveByProject(id, req['userId']);
   }
 
+  @Post(':id/toggle-pin')
+  togglePin(@Param('id') id: string, @Req() req: Request) {
+    return this.projectsService.togglePin(id, req['userId']);
+  }
+
+  @Post(':id/pages/:pageId/visit')
+  recordPageVisit(
+    @Param('id') id: string,
+    @Param('pageId') pageId: string,
+    @Req() req: Request,
+  ) {
+    return this.projectsService.recordPageVisit(pageId, id, req['userId']);
+  }
+
+  @Get(':id/recent-pages')
+  getRecentPages(@Param('id') id: string, @Req() req: Request) {
+    return this.projectsService.getRecentPages(req['userId']);
+  }
+
   @Post(':id/transfer-ownership')
   @UseGuards(ProjectRoleGuard)
   @ProjectRoles('owner')

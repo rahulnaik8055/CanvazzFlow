@@ -125,6 +125,7 @@ export class ProjectsService {
       pagesCount: m.project._count.pages,
       isFavorited: !!m.favoritedAt,
       isArchived: !!m.archivedAt,
+      isPinned: !!m.pinnedAt,
       lastOpenedAt: m.lastOpenedAt,
       joinedAt: m.joinedAt,
       membershipId: m.id,
@@ -167,6 +168,47 @@ export class ProjectsService {
     });
 
     return { isArchived: !!updated.archivedAt };
+  }
+
+  async togglePin(projectId: string, userId: string) {
+    const m = await this.prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+    if (!m) throw new ForbiddenException('Access denied');
+
+    const updated = await this.prisma.projectMember.update({
+      where: { id: m.id },
+      data: { pinnedAt: m.pinnedAt ? null : new Date() },
+    });
+
+    return { isPinned: !!updated.pinnedAt };
+  }
+
+  async recordPageVisit(pageId: string, projectId: string, userId: string) {
+    await this.prisma.pageVisit.create({
+      data: { userId, pageId, projectId },
+    });
+  }
+
+  async getRecentPages(userId: string, limit = 6) {
+    const visits = await this.prisma.pageVisit.findMany({
+      where: { userId },
+      include: {
+        page: { select: { id: true, name: true } },
+        project: { select: { id: true, name: true } },
+      },
+      orderBy: { visitedAt: 'desc' },
+      take: limit,
+      distinct: ['pageId'],
+    });
+
+    return visits.map((v) => ({
+      pageId: v.page.id,
+      pageName: v.page.name,
+      projectId: v.project.id,
+      projectName: v.project.name,
+      visitedAt: v.visitedAt,
+    }));
   }
 
   async toggleArchiveByProject(projectId: string, userId: string) {

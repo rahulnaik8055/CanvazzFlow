@@ -51,6 +51,7 @@ model Project {
   accessRequests AccessRequest[]
   invitations    ProjectInvitation[]
   pages          Page[]
+  pageVisits     PageVisit[]
   User           User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   members        ProjectMember[]
 
@@ -65,6 +66,7 @@ model Page {
   updatedAt DateTime @updatedAt
   projectId String
   nodes     Node[]
+  visits    PageVisit[]
   project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
@@ -111,6 +113,7 @@ model ProjectMember {
   favoritedAt DateTime?
   archivedAt  DateTime?
   lastOpenedAt DateTime?
+  pinnedAt    DateTime?
   project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -119,6 +122,21 @@ model ProjectMember {
   @@index([projectId])
   @@index([archivedAt])
   @@index([favoritedAt])
+  @@index([pinnedAt])
+}
+
+model PageVisit {
+  id        String   @id @default(cuid())
+  userId    String
+  pageId    String
+  projectId String
+  visitedAt DateTime @default(now())
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, visitedAt])
+  @@index([pageId])
+  @@index([projectId])
 }
 
 model ProjectInvitation {

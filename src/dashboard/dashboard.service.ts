@@ -6,69 +6,96 @@ export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   async getDashboard(userId: string) {
-    const projects = await this.prisma.project.findMany({
-      where: {
-        members: { some: { userId } },
-      },
-      include: {
-        User: { select: { id: true, firstName: true, lastName: true, imageUrl: true } },
-        _count: { select: { members: true, pages: true } },
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+    const membershipWhere = { userId };
 
-    const pendingRequests = await this.prisma.accessRequest.findMany({
-      where: {
-        status: 'pending',
-        project: { ownerId: userId },
-      },
-      include: {
-        user: { select: { id: true, firstName: true, lastName: true, email: true, imageUrl: true } },
-        project: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const [memberships, pendingRequests, recentPages] = await Promise.all([
+      this.prisma.projectMember.findMany({
+        where: membershipWhere,
+        include: {
+          project: {
+            include: {
+              User: { select: { id: true, firstName: true, lastName: true, imageUrl: true } },
+              _count: { select: { members: true, pages: true } },
+            },
+          },
+        },
+      }),
+      this.prisma.accessRequest.findMany({
+        where: {
+          status: 'pending',
+          project: { ownerId: userId },
+        },
+        include: {
+          user: { select: { id: true, firstName: true, lastName: true, email: true, imageUrl: true } },
+          project: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.pageVisit.findMany({
+        where: { userId },
+        include: {
+          page: { select: { id: true, name: true } },
+          project: { select: { id: true, name: true } },
+        },
+        orderBy: { visitedAt: 'desc' },
+        take: 10,
+        distinct: ['pageId'],
+      }),
+    ]);
 
-    const totalPages = projects.reduce((sum, p) => sum + p._count.pages, 0);
-    const totalMembers = projects.reduce((sum, p) => sum + p._count.members, 0);
+    const now = new Date();
+    const projects = memberships.map((m) => ({
+      id: m.project.id,
+      name: m.project.name,
+      description: m.project.description,
+      thumbnail: m.project.thumbnail,
+      createdAt: m.project.createdAt,
+      updatedAt: m.project.updatedAt,
+      ownerId: m.project.ownerId,
+      visibility: m.project.visibility,
+      owner: m.project.User,
+      memberCount: m.project._count.members,
+      pagesCount: m.project._count.pages,
+      myRole: m.role,
+      isFavorited: !!m.favoritedAt,
+      isArchived: !!m.archivedAt,
+      isPinned: !!m.pinnedAt,
+      lastOpenedAt: m.lastOpenedAt,
+      membershipId: m.id,
+    }));
+
+    const totalPages = projects.reduce((sum, p) => sum + p.pagesCount, 0);
+    const totalMembers = projects.reduce((sum, p) => sum + p.memberCount, 0);
 
     const memberIds = new Set<string>();
-    projects.forEach((p) => memberIds.add(p.ownerId));
-
-    const otherMembers = await this.prisma.projectMember.findMany({
-      where: { projectId: { in: projects.map((p) => p.id) } },
-      select: { userId: true },
-    });
-    otherMembers.forEach((m) => memberIds.add(m.userId));
-
+    memberships.forEach((m) => memberIds.add(m.project.ownerId));
+    memberships.forEach((m) => memberIds.add(m.userId));
     const collaboratorIds = [...memberIds].filter((id) => id !== userId);
     const collaborators = await this.prisma.user.findMany({
       where: { id: { in: collaboratorIds } },
       select: { id: true, firstName: true, lastName: true, email: true, imageUrl: true },
     });
 
-    const projectsData = projects.map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      thumbnail: p.thumbnail,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-      ownerId: p.ownerId,
-      visibility: p.visibility,
-      owner: p.User,
-      memberCount: p._count.members,
-      pagesCount: p._count.pages,
-    }));
+    const activeProjects = projects.filter((p) => !p.isArchived);
 
-    const recentActivity = projects.slice(0, 10).map((p) => ({
-      type: 'project_updated' as const,
-      projectId: p.id,
-      projectName: p.name,
-      timestamp: p.updatedAt,
-      userId: p.ownerId,
-      userName: [p.User.firstName, p.User.lastName].filter(Boolean).join(' ') || 'Unknown',
-    }));
+    const pinnedProjects = projects.filter((p) => p.isPinned);
+    const favoriteProjects = projects.filter((p) => p.isFavorited);
+    const recentProjects = [...projects]
+      .filter((p) => p.lastOpenedAt)
+      .sort((a, b) => new Date(b.lastOpenedAt!).getTime() - new Date(a.lastOpenedAt!).getTime())
+      .slice(0, 6);
+
+    const recentActivity = memberships
+      .sort((a, b) => new Date(b.project.updatedAt).getTime() - new Date(a.project.updatedAt).getTime())
+      .slice(0, 10)
+      .map((m) => ({
+        type: 'project_updated' as const,
+        projectId: m.project.id,
+        projectName: m.project.name,
+        timestamp: m.project.updatedAt,
+        userId: m.project.ownerId,
+        userName: [m.project.User.firstName, m.project.User.lastName].filter(Boolean).join(' ') || 'Unknown',
+      }));
 
     return {
       stats: {
@@ -77,8 +104,17 @@ export class DashboardService {
         totalMembers: totalMembers - projects.length,
         pendingRequests: pendingRequests.length,
       },
-      projects: projectsData,
-      recentProjects: projectsData.slice(0, 6),
+      projects: activeProjects,
+      pinnedProjects,
+      favoriteProjects,
+      recentProjects,
+      recentPages: recentPages.map((v) => ({
+        pageId: v.page.id,
+        pageName: v.page.name,
+        projectId: v.project.id,
+        projectName: v.project.name,
+        visitedAt: v.visitedAt,
+      })),
       pendingRequests: pendingRequests.map((r) => ({
         id: r.id,
         message: r.message,

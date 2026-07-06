@@ -8,33 +8,31 @@ datasource db {
 }
 
 model User {
-  id        String   @id
-  email     String   @unique
-  firstName String?
-  lastName  String?
-  imageUrl  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id             String          @id
+  email          String          @unique
+  firstName      String?
+  lastName       String?
+  imageUrl       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  accessRequests AccessRequest[]
   projects       Project[]
-  memberships    ProjectMember[] 
-  accessRequests AccessRequest[] 
+  memberships    ProjectMember[]
 }
 
 model Project {
-  id          String            @id @default(cuid())
-  name        String
-  description String?
-  thumbnail   String?
-  visibility  ProjectVisibility @default(public) 
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  ownerId     String
-
+  id             String            @id @default(cuid())
+  name           String
+  description    String?
+  thumbnail      String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  ownerId        String
+  visibility     ProjectVisibility @default(public)
+  accessRequests AccessRequest[]
   pages          Page[]
-  User           User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  members        ProjectMember[] 
-  accessRequests AccessRequest[] 
+  User           User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members        ProjectMember[]
 
   @@index([ownerId])
 }
@@ -46,9 +44,8 @@ model Page {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   projectId String
-
-  nodes   Node[]
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  nodes     Node[]
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
 }
@@ -77,10 +74,9 @@ model Node {
   points      Float[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
-
-  page       Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
-  Node       Node?  @relation("NodeToNode", fields: [parentId], references: [id], onDelete: Cascade)
-  other_Node Node[] @relation("NodeToNode")
+  page        Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  Node        Node?       @relation("NodeToNode", fields: [parentId], references: [id], onDelete: Cascade)
+  other_Node  Node[]      @relation("NodeToNode")
 
   @@index([pageId])
   @@index([parentId])
@@ -92,9 +88,8 @@ model ProjectMember {
   userId    String
   role      MemberRole @default(editor)
   joinedAt  DateTime   @default(now())
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
   @@index([userId])
@@ -106,12 +101,12 @@ model AccessRequest {
   projectId String
   userId    String
   status    RequestStatus @default(pending)
-  message   String?       
+  message   String?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([projectId, userId])
   @@index([userId])
   @@index([projectId])
@@ -132,7 +127,6 @@ enum StrokeStyle {
   dashed
 }
 
-
 enum ProjectVisibility {
   public
   private
@@ -149,4 +143,3 @@ enum RequestStatus {
   approved
   denied
 }
-

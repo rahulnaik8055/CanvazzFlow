@@ -11,11 +11,20 @@ export class PageService {
   constructor(private prisma: PrismaService) {}
 
   private async verifyOwnership(projectId: string, userId: string) {
-    const project = await this.prisma.project.findFirst({
-      where: { id: projectId, ownerId: userId },
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
     });
-    if (!project)
-      throw new ForbiddenException('Project not found or access denied');
+
+    if (!project) throw new NotFoundException('Project not found');
+
+    if (project.ownerId === userId) return project;
+
+    const membership = await this.prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+
+    if (!membership) throw new ForbiddenException('Access denied');
+
     return project;
   }
 

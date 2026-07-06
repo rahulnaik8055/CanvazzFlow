@@ -1,3 +1,4 @@
+// access-requests.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -19,12 +20,11 @@ export class AccessRequestsService {
   async create(userId: string, projectId: string, message?: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      include: { User: { select: { id: true } } },
+      select: { id: true, name: true, ownerId: true },
     });
     if (!project) throw new NotFoundException('Project not found');
-    if (project.ownerId === userId) {
+    if (project.ownerId === userId)
       throw new ConflictException('You own this project');
-    }
 
     const alreadyMember = await this.prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId, userId } },
@@ -109,10 +109,7 @@ export class AccessRequestsService {
 
   async getAllPendingForOwner(ownerId: string) {
     return this.prisma.accessRequest.findMany({
-      where: {
-        status: 'pending',
-        project: { ownerId },
-      },
+      where: { status: 'pending', project: { ownerId } },
       include: {
         user: {
           select: {
@@ -123,11 +120,27 @@ export class AccessRequestsService {
             imageUrl: true,
           },
         },
-        project: {
-          select: { id: true, name: true },
-        },
+        project: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getPendingForProject(projectId: string) {
+    return this.prisma.accessRequest.findMany({
+      where: { projectId, status: 'pending' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            imageUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
     });
   }
 
@@ -135,7 +148,18 @@ export class AccessRequestsService {
     return this.prisma.accessRequest.findMany({
       where: { userId },
       include: {
-        project: { select: { id: true, name: true, thumbnail: true } },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            thumbnail: true,
+            pages: {
+              select: { id: true },
+              orderBy: { order: 'asc' },
+              take: 1,
+            },
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });

@@ -1,4 +1,3 @@
-// src/access-requests/access-requests.controller.ts
 import {
   Controller,
   Post,
@@ -9,10 +8,10 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ClerkAuthGuard } from 'src/auth/clerk.guard';
 import { ProjectRoleGuard } from '../common/guards/project-role.guard';
 import { ProjectRoles } from '../common/decorators/project-role.decorator';
 import { AccessRequestsService } from './access-requests.service';
-import { ClerkAuthGuard } from 'src/auth/clerk.guard';
 
 class CreateRequestDto {
   projectId!: string;
@@ -39,7 +38,19 @@ export class AccessRequestsController {
   }
 
   @Get('pending')
-  pending(@Req() req) {
+  pendingForOwner(@Req() req) {
     return this.svc.getAllPendingForOwner(req['userId']);
+  }
+
+  @Get('project/:projectId/pending')
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('owner')
+  pendingForProject(@Param('projectId') projectId: string) {
+    return this.svc.getPendingForProject(projectId);
+  }
+
+  @Get('mine')
+  mine(@Req() req) {
+    return this.svc.myRequests(req['userId']);
   }
 }

@@ -1,4 +1,3 @@
-// src/common/guards/project-role.guard.ts
 import {
   Injectable,
   CanActivate,
@@ -33,8 +32,23 @@ export class ProjectRoleGuard implements CanActivate {
     if (!required?.length) return true;
 
     const req = ctx.switchToHttp().getRequest();
-    const userId: string = req.user?.id;
-    const projectId: string = req.params.projectId ?? req.body?.projectId;
+    const userId: string = req.userId;
+
+    let projectId: string | undefined =
+      req.params.projectId ?? req.body?.projectId;
+
+    if (!projectId && req.params.id) {
+      projectId = req.params.id;
+    }
+
+    if (!projectId && req.params.pageId) {
+      const page = await this.prisma.page.findUnique({
+        where: { id: req.params.pageId },
+        select: { projectId: true },
+      });
+      if (!page) throw new NotFoundException('Page not found');
+      projectId = page.projectId;
+    }
 
     if (!userId || !projectId) {
       throw new ForbiddenException('Missing auth or project context');

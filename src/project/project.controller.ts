@@ -21,6 +21,8 @@ import {
 } from '@nestjs/common';
 
 import { ClerkAuthGuard } from 'src/auth/clerk.guard';
+import { ProjectRoleGuard } from '../common/guards/project-role.guard';
+import { ProjectRoles } from '../common/decorators/project-role.decorator';
 import { ProjectsService } from './project.service';
 
 @Controller('project')
@@ -39,6 +41,8 @@ export class ProjectsController {
   }
 
   @Get(':id')
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('viewer', 'editor', 'owner')
   getProject(@Param('id') id: string, @Req() req: Request) {
     return this.projectsService.getProject(id, req['userId']);
   }
@@ -57,6 +61,8 @@ export class ProjectsController {
   }
 
   @Delete(':id')
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('owner')
   deleteProject(@Param('id') id: string, @Req() req: Request) {
     return this.projectsService.deleteProject(id, req['userId']);
   }

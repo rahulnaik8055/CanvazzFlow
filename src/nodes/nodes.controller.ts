@@ -13,6 +13,8 @@ import { Request } from 'express';
 import { NodesService } from './nodes.service';
 import { LiveblocksService } from '../liveblocks/liveblocks.service';
 import { ClerkAuthGuard } from 'src/auth/clerk.guard';
+import { ProjectRoleGuard } from '../common/guards/project-role.guard';
+import { ProjectRoles } from '../common/decorators/project-role.decorator';
 
 @Controller()
 export class NodesController {
@@ -22,13 +24,15 @@ export class NodesController {
   ) {}
 
   @Get('pages/:pageId/nodes')
-  @UseGuards(ClerkAuthGuard)
+  @UseGuards(ClerkAuthGuard, ProjectRoleGuard)
+  @ProjectRoles('viewer', 'editor', 'owner')
   getNodes(@Param('pageId') pageId: string, @Req() req: Request) {
     return this.nodesService.getNodes(pageId, req['userId']);
   }
 
   @Post('pages/:pageId/nodes')
-  @UseGuards(ClerkAuthGuard)
+  @UseGuards(ClerkAuthGuard, ProjectRoleGuard)
+  @ProjectRoles('editor', 'owner')
   saveNodes(
     @Param('pageId') pageId: string,
     @Body() body: { nodes: any[] },

@@ -9,10 +9,10 @@ import {
   Req,
   Query,
   UseGuards,
-  NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { ClerkAuthGuard } from 'src/auth/clerk.guard';
+import { ProjectRoleGuard } from '../common/guards/project-role.guard';
+import { ProjectRoles } from '../common/decorators/project-role.decorator';
 import { PageService } from './page.service';
 
 @Controller('project/:projectId/pages')
@@ -21,6 +21,8 @@ export class PageController {
   constructor(private readonly pageService: PageService) {}
 
   @Get()
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('viewer', 'editor', 'owner')
   getPages(
     @Param('projectId') projectId: string,
     @Req() req: any,
@@ -36,11 +38,15 @@ export class PageController {
   }
 
   @Post()
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('editor', 'owner')
   createPage(@Param('projectId') projectId: string, @Req() req: any) {
     return this.pageService.createPage(projectId, req['userId']);
   }
 
   @Patch(':pageId')
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('editor', 'owner')
   updatePage(
     @Param('projectId') projectId: string,
     @Param('pageId') pageId: string,
@@ -51,6 +57,8 @@ export class PageController {
   }
 
   @Delete(':pageId')
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('editor', 'owner')
   deletePage(
     @Param('projectId') projectId: string,
     @Param('pageId') pageId: string,
@@ -60,6 +68,8 @@ export class PageController {
   }
 
   @Get(':pageId/my-role')
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('viewer', 'editor', 'owner')
   getMyRole(@Param('pageId') pageId: string, @Req() req) {
     return this.pageService.getMyRole(pageId, req['userId']);
   }

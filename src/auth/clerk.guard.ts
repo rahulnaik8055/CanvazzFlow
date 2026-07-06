@@ -7,9 +7,6 @@ import {
 } from '@nestjs/common';
 import { verifyToken } from '@clerk/backend';
 import { Request } from 'express';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
 
 @Injectable()
 export class ClerkAuthGuard implements CanActivate {

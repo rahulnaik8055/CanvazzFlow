@@ -70,11 +70,14 @@ export class LiveblocksService {
 
     const role = isOwner ? 'owner' : (member?.role ?? 'viewer');
 
+    const name =
+      [user!.firstName, user!.lastName].filter(Boolean).join(' ') ||
+      user!.email;
+
     const session = this.liveblocks.prepareSession(userId, {
       userInfo: {
-        name:
-          [user!.firstName, user!.lastName].filter(Boolean).join(' ') ||
-          user!.email,
+        name,
+        email: user!.email,
         imageUrl: user!.imageUrl,
         role,
         color: this.colorFor(userId),
@@ -87,7 +90,8 @@ export class LiveblocksService {
       session.allow(roomId, session.FULL_ACCESS);
     }
 
-    return session.authorize();
+    const { status, body } = await session.authorize();
+    return { status, body: JSON.parse(body) };
   }
 
   private colorFor(userId: string): string {

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useApi } from "@/lib/api";
 import { toast } from "sonner";
-import { PageShell } from "@/components/layout/PageShell";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { useRouter } from "next/navigation";
+import { Search, Filter, Star, Archive, Plus } from "lucide-react";
 import {
   Pagination,
   PaginationContent,
@@ -19,7 +19,16 @@ import { EmptyState } from "@/components/custom/EmptyState";
 import { ProjectCard, IProject } from "@/components/project/ProjectCard";
 import { ProjectModal } from "@/components/project/ProjectModal";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useRouter } from "next/navigation";
+
+const LIMIT = 12;
+
+const FILTER_OPTIONS = [
+  { value: "all", label: "All" },
+  { value: "owned", label: "Owned" },
+  { value: "shared", label: "Shared" },
+  { value: "favorites", label: "Favorites" },
+  { value: "archived", label: "Archived" },
+] as const;
 
 interface Meta {
   total: number;
@@ -30,143 +39,177 @@ interface Meta {
   hasPrev: boolean;
 }
 
-const LIMIT = 6;
-
 export default function ProjectsPage() {
-  const api = useApi();
+  const apiRef = useRef(useApi());
+  const router = useRouter();
   const [projects, setProjects] = useState<IProject[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<IProject | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const debouncedSearch = useDebounce(search);
-  const router = useRouter();
+  const debouncedSearch = useDebounce(search, 300);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
-
     try {
-      const res = await api.get(
-        `project?page=${page}&limit=${LIMIT}&search=${debouncedSearch}`,
-      );
-      setProjects(res);
-      setMeta(res.meta);
-    } catch (err) {
-      console.error(err);
+      const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), filter });
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      const res = await apiRef.current.get(`project?${params}`);
+      setProjects(res.items);
+      setMeta(res);
+    } catch {
       toast.error("Failed to load projects");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }, [page, debouncedSearch]);
+  }, [page, filter, debouncedSearch]);
 
-  // reset to page 1 when search changes
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filter]);
 
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
 
+  const handleToggleFavorite = useCallback(async (project: IProject) => {
+    if (!project.membershipId) return;
+    try {
+      await apiRef.current.post(`project/membership/${project.membershipId}/toggle-favorite`);
+      fetchProjects();
+    } catch {
+      toast.error("Failed to update favorite");
+    }
+  }, [fetchProjects]);
+
+  const handleToggleArchive = useCallback(async (project: IProject) => {
+    if (!project.membershipId) return;
+    try {
+      await apiRef.current.post(`project/membership/${project.membershipId}/toggle-archive`);
+      toast.success(project.isArchived ? "Project unarchived" : "Project archived");
+      fetchProjects();
+    } catch {
+      toast.error("Failed to update archive status");
+    }
+  }, [fetchProjects]);
+
   const handleCreate = async (data: { name: string; description: string }) => {
     try {
-      await api.post("project", data);
+      await apiRef.current.post("project", data);
       toast.success("Project created successfully");
       setModalOpen(false);
       fetchProjects();
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("Failed to create project");
     }
   };
 
-  const handleRename = useCallback(
-    async (project: IProject) => {
-      setRenameTarget(project);
-      setRenameValue(project.name);
-    },
-    [],
-  );
+  const handleRename = useCallback((project: IProject) => {
+    setRenameTarget(project);
+    setRenameValue(project.name);
+  }, []);
 
   const handleRenameSubmit = useCallback(async () => {
     if (!renameTarget || !renameValue.trim()) return;
     try {
-      await api.patch(`project/${renameTarget.id}`, { name: renameValue.trim() });
+      await apiRef.current.patch(`project/${renameTarget.id}`, { name: renameValue.trim() });
       toast.success("Project renamed");
       setRenameTarget(null);
       fetchProjects();
     } catch {
       toast.error("Failed to rename project");
     }
-  }, [renameTarget, renameValue, api, fetchProjects]);
+  }, [renameTarget, renameValue, fetchProjects]);
 
-  const handleDelete = useCallback(
-    async (project: IProject) => {
-      if (!window.confirm(`Delete "${project.name}"? This cannot be undone.`)) return;
-      try {
-        await api.delete(`project/${project.id}`);
-        toast.success("Project deleted");
-        fetchProjects();
-      } catch {
-        toast.error("Failed to delete project");
-      }
-    },
-    [api, fetchProjects],
-  );
+  const handleDelete = useCallback(async (project: IProject) => {
+    if (!window.confirm(`Delete "${project.name}"? This cannot be undone.`)) return;
+    try {
+      await apiRef.current.delete(`project/${project.id}`);
+      toast.success("Project deleted");
+      fetchProjects();
+    } catch {
+      toast.error("Failed to delete project");
+    }
+  }, [fetchProjects]);
 
-  const handleDuplicate = useCallback(
-    async (project: IProject) => {
-      try {
-        await api.post("project", {
-          name: `${project.name} (copy)`,
-          description: project.description,
-          visibility: project.visibility,
-        });
-        toast.success("Project duplicated");
-        fetchProjects();
-      } catch {
-        toast.error("Failed to duplicate project");
-      }
-    },
-    [api, fetchProjects],
-  );
+  const handleSettings = useCallback((project: IProject) => {
+    router.push(`/project/${project.id}/settings`);
+  }, [router]);
+
+  const handleDuplicate = useCallback(async (project: IProject) => {
+    try {
+      await apiRef.current.post("project", {
+        name: `${project.name} (copy)`,
+        description: project.description,
+        visibility: project.visibility,
+      });
+      toast.success("Project duplicated");
+      fetchProjects();
+    } catch {
+      toast.error("Failed to duplicate project");
+    }
+  }, [fetchProjects]);
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-8">
-        <PageHeader
-          title="Projects"
-          search={search}
-          onSearch={setSearch}
-          searchPlaceholder="Search projects..."
-          refreshing={refreshing}
-          onRefresh={() => fetchProjects()}
-          actionLabel="New project"
-          onAction={() => setModalOpen(true)}
-        />
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search projects..."
+            className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+          />
+        </div>
+
+        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+          {FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setFilter(opt.value)}
+              className={`px-3 py-2 text-sm transition-colors ${
+                filter === opt.value
+                  ? "bg-gray-900 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-700 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Project
+        </button>
       </div>
 
       {/* Grid */}
       {loading ? (
         <SkeletonGrid count={LIMIT} />
-      ) : projects && projects.length === 0 ? (
+      ) : projects.length === 0 ? (
         <EmptyState
-          title={search ? "No results found" : "No projects yet"}
+          title={debouncedSearch ? "No results found" : "No projects yet"}
           description={
-            search
-              ? `No projects match "${search}"`
+            debouncedSearch
+              ? `No projects match "${debouncedSearch}"`
               : "Create your first project to get started."
           }
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {projects &&
-            projects.map((project) => (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {projects.map((project) => (
               <ProjectCard
                 key={project.id}
                 project={project}
@@ -174,67 +217,70 @@ export default function ProjectsPage() {
                 onRename={handleRename}
                 onDelete={handleDelete}
                 onDuplicate={handleDuplicate}
+                onToggleFavorite={handleToggleFavorite}
+                onToggleArchive={handleToggleArchive}
+                onSettings={handleSettings}
               />
             ))}
-        </div>
-      )}
+          </div>
 
-      {/* Pagination */}
-      {meta && meta.totalPages > 1 && (
-        <Pagination className="mt-8">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className={
-                  page === 1
-                    ? "pointer-events-none opacity-50"
-                    : "cursor-pointer"
-                }
-              />
-            </PaginationItem>
+          {meta && meta.totalPages > 1 && (
+            <Pagination className="mt-8">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className={
+                      page === 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
 
-            {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
-              .filter(
-                (p) =>
-                  p === 1 ||
-                  p === meta.totalPages ||
-                  (p >= page - 1 && p <= page + 1),
-              )
-              .map((p, i, arr) => {
-                const prev = arr[i - 1];
-                return (
-                  <span key={p} className="flex items-center">
-                    {prev && p - prev > 1 && (
-                      <PaginationItem>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )}
-                    <PaginationItem>
-                      <PaginationLink
-                        isActive={p === page}
-                        onClick={() => setPage(p)}
-                        className="cursor-pointer"
-                      >
-                        {p}
-                      </PaginationLink>
-                    </PaginationItem>
-                  </span>
-                );
-              })}
+                {Array.from({ length: meta.totalPages }, (_, i) => i + 1)
+                  .filter(
+                    (p) =>
+                      p === 1 ||
+                      p === meta.totalPages ||
+                      (p >= page - 1 && p <= page + 1),
+                  )
+                  .map((p, i, arr) => {
+                    const prev = arr[i - 1];
+                    return (
+                      <span key={p} className="flex items-center">
+                        {prev && p - prev > 1 && (
+                          <PaginationItem>
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                        <PaginationItem>
+                          <PaginationLink
+                            isActive={p === page}
+                            onClick={() => setPage(p)}
+                            className="cursor-pointer"
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      </span>
+                    );
+                  })}
 
-            <PaginationItem>
-              <PaginationNext
-                onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-                className={
-                  page === meta.totalPages
-                    ? "pointer-events-none opacity-50"
-                    : "cursor-pointer"
-                }
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+                    className={
+                      page === meta.totalPages
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
       )}
 
       <ProjectModal

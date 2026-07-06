@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
-import { ArrowLeft, Pencil, Trash2, Check, X } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Check, X, Settings } from "lucide-react";
 import {
   Pagination,
   PaginationContent,
@@ -142,6 +142,16 @@ export default function PagesPage() {
         refreshing={refreshing}
         onRefresh={() => fetchPages(true)}
       />
+
+      <div className="flex items-center justify-end mb-4">
+        <button
+          onClick={() => router.push(`/project/${projectId}/settings`)}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          Project Settings
+        </button>
+      </div>
 
       {/* Grid */}
       {loading ? (

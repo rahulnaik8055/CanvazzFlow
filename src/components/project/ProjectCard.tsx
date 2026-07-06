@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Star,
   MoreHorizontal,
@@ -15,6 +15,8 @@ import {
   Pencil,
   FolderOpen,
   Heart,
+  Archive,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ContextMenu } from "@/components/ui/context-menu";
@@ -31,6 +33,10 @@ export interface IProject {
   myRole?: "owner" | "editor" | "viewer";
   memberCount?: number;
   pagesCount?: number;
+  isFavorited?: boolean;
+  isArchived?: boolean;
+  membershipId?: string;
+  lastOpenedAt?: string | null;
   owner?: {
     id: string;
     firstName: string | null;
@@ -52,6 +58,9 @@ interface ProjectCardProps {
   onRename?: (project: IProject) => void;
   onDelete?: (project: IProject) => void;
   onDuplicate?: (project: IProject) => void;
+  onToggleFavorite?: (project: IProject) => void;
+  onToggleArchive?: (project: IProject) => void;
+  onSettings?: (project: IProject) => void;
 }
 
 function timeAgo(date: string) {
@@ -109,38 +118,30 @@ function thumbnailGradient(id: string) {
   return THUMBNAIL_GRADIENTS[Math.abs(hash) % THUMBNAIL_GRADIENTS.length];
 }
 
-function getFavorites(): Set<string> {
-  if (typeof window === "undefined") return new Set();
-  try {
-    const raw = localStorage.getItem("project-favorites");
-    return new Set(raw ? JSON.parse(raw) : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function toggleFavorite(id: string) {
-  const favs = getFavorites();
-  if (favs.has(id)) favs.delete(id);
-  else favs.add(id);
-  localStorage.setItem("project-favorites", JSON.stringify([...favs]));
-  window.dispatchEvent(new Event("storage"));
-}
-
 export function ProjectCard({
   project,
   onClick,
   onRename,
   onDelete,
   onDuplicate,
+  onToggleFavorite,
+  onToggleArchive,
+  onSettings,
 }: ProjectCardProps) {
-  const [favorite, setFavorite] = useState(() => getFavorites().has(project.id));
+  const [favorite, setFavorite] = useState(project.isFavorited ?? false);
 
-  const handleStar = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    toggleFavorite(project.id);
-    setFavorite((prev) => !prev);
-  }, [project.id]);
+  useEffect(() => {
+    setFavorite(project.isFavorited ?? false);
+  }, [project.isFavorited]);
+
+  const handleStar = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation?.();
+    if (onToggleFavorite) {
+      onToggleFavorite(project);
+    } else {
+      setFavorite((prev) => !prev);
+    }
+  }, [project, onToggleFavorite]);
 
   const owner = ownerDisplay(project.owner, project.User);
   const gradient = thumbnailGradient(project.id);
@@ -154,10 +155,16 @@ export function ProjectCard({
     {
       label: favorite ? "Remove Favorite" : "Add to Favorites",
       icon: <Heart size={12} />,
-      onClick: () => { toggleFavorite(project.id); setFavorite((p) => !p); },
+      onClick: handleStar,
+    },
+    {
+      label: project.isArchived ? "Unarchive" : "Archive",
+      icon: <Archive size={12} />,
+      onClick: () => onToggleArchive?.(project),
     },
     { label: "Rename", icon: <Pencil size={12} />, onClick: () => onRename?.(project) },
     { label: "Duplicate", icon: <Copy size={12} />, onClick: () => onDuplicate?.(project) },
+    { label: "Settings", icon: <SettingsIcon size={12} />, onClick: () => onSettings?.(project) },
     { label: "Delete", icon: <Trash2 size={12} />, danger: true, onClick: () => onDelete?.(project) },
   ];
 

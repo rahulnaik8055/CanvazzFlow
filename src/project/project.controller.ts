@@ -12,6 +12,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -58,6 +59,17 @@ export class ProjectsController {
     },
   ) {
     return this.projectsService.createProject(req['userId'], body);
+  }
+
+  @Patch(':id')
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('owner')
+  renameProject(
+    @Param('id') id: string,
+    @Body() body: { name: string },
+    @Req() req,
+  ) {
+    return this.projectsService.renameProject(id, body.name, req['userId']);
   }
 
   @Delete(':id')

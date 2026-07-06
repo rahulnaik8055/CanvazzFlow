@@ -12,6 +12,7 @@ import { ProjectMembersController } from './project-members/project-members.cont
 import { ProjectMembersService } from './project-members/project-members.service';
 import { ProjectMembersModule } from './project-members/project-members.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { GatewayModule } from './gateway/gateway.module';
     LiveblocksModule,
     AccessRequestsModule,
     ProjectMembersModule,
+    NotificationsModule,
   ],
   controllers: [AppController, ProjectMembersController],
   providers: [AppService, ProjectMembersService],

@@ -4,11 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { ProjectVisibility } from 'generated/prisma/enums';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async createProject(
     userId: string,
@@ -123,6 +127,40 @@ export class ProjectsService {
       throw new ForbiddenException('Only the owner can delete this project');
 
     return this.prisma.project.delete({ where: { id: projectId } });
+  }
+
+  async renameProject(projectId: string, name: string, userId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, name: true, ownerId: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    if (project.ownerId !== userId)
+      throw new ForbiddenException('Only the owner can rename this project');
+
+    const updated = await this.prisma.project.update({
+      where: { id: projectId },
+      data: { name },
+    });
+
+    const members = await this.prisma.projectMember.findMany({
+      where: { projectId },
+      select: { userId: true },
+    });
+
+    for (const m of members) {
+      if (m.userId !== userId) {
+        this.notifications.create({
+          userId: m.userId,
+          type: 'project_renamed',
+          title: 'Project Renamed',
+          message: `"${project.name}" was renamed to "${name}"`,
+          projectId,
+        });
+      }
+    }
+
+    return updated;
   }
 
   async isMember(projectId: string, userId: string): Promise<boolean> {

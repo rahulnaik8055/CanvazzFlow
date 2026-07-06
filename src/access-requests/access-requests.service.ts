@@ -1,4 +1,3 @@
-// access-requests.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -8,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppGateway } from '../gateway/app.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 import { MemberRole } from 'generated/prisma/enums';
 
 @Injectable()
@@ -15,6 +15,7 @@ export class AccessRequestsService {
   constructor(
     private prisma: PrismaService,
     private gateway: AppGateway,
+    private notifications: NotificationsService,
   ) {}
 
   async create(userId: string, projectId: string, message?: string) {
@@ -49,14 +50,22 @@ export class AccessRequestsService {
       },
     });
 
+    const requestorName = this.displayName(request.user);
     this.gateway.notifyUser(project.ownerId, 'access-request', {
       requestId: request.id,
       projectId: project.id,
       projectName: project.name,
       userId: request.user.id,
-      userName: this.displayName(request.user),
+      userName: requestorName,
       userImage: request.user.imageUrl,
       message: request.message,
+    });
+    this.notifications.create({
+      userId: project.ownerId,
+      type: 'access_request',
+      title: 'New Access Request',
+      message: `${requestorName} requested access to "${project.name}"`,
+      projectId: project.id,
     });
 
     return request;
@@ -102,6 +111,13 @@ export class AccessRequestsService {
       projectId: request.projectId,
       projectName: request.project.name,
       approved,
+    });
+    this.notifications.create({
+      userId: request.userId,
+      type: approved ? 'access_request_approved' : 'access_request_denied',
+      title: approved ? 'Access Approved' : 'Access Denied',
+      message: `Your request to join "${request.project.name}" was ${approved ? 'approved' : 'denied'}`,
+      projectId: request.projectId,
     });
 
     return { ok: true };

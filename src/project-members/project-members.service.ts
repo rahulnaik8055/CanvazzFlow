@@ -5,11 +5,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { MemberRole } from 'generated/prisma/enums';
 
 @Injectable()
 export class ProjectMembersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async list(projectId: string) {
     const [owner, members] = await Promise.all([
@@ -88,11 +92,19 @@ export class ProjectMembersService {
       throw new BadRequestException('Cannot change your own role');
     }
 
-    return this.prisma.projectMember.update({
+    const updated = await this.prisma.projectMember.update({
       where: { projectId_userId: { projectId, userId: targetUserId } },
       data: { role },
       include: { user: true },
     });
+    this.notifications.create({
+      userId: targetUserId,
+      type: 'role_changed',
+      title: 'Role Updated',
+      message: `Your role in the project has been changed to ${role}`,
+      projectId,
+    });
+    return updated;
   }
 
   async remove(projectId: string, targetUserId: string, requesterId: string) {
@@ -111,9 +123,19 @@ export class ProjectMembersService {
       throw new BadRequestException('Owner cannot leave the project');
     }
 
-    await this.prisma.projectMember.delete({
+    const removed = await this.prisma.projectMember.delete({
       where: { projectId_userId: { projectId, userId: targetUserId } },
+      include: { user: true },
     });
+    if (!isSelf) {
+      this.notifications.create({
+        userId: targetUserId,
+        type: 'member_removed',
+        title: 'Removed from Project',
+        message: `You were removed from ${project.name || 'the project'}`,
+        projectId,
+      });
+    }
     return { ok: true };
   }
 }

@@ -15,6 +15,12 @@ export interface DashboardProject {
   owner: { id: string; firstName: string | null; lastName: string | null; imageUrl: string | null } | null;
   memberCount: number;
   pagesCount: number;
+  myRole?: "owner" | "editor" | "viewer";
+  isFavorited?: boolean;
+  isArchived?: boolean;
+  isPinned?: boolean;
+  lastOpenedAt?: string | null;
+  membershipId?: string;
 }
 
 export interface DashboardPendingRequest {
@@ -42,6 +48,14 @@ export interface DashboardCollaborator {
   imageUrl: string | null;
 }
 
+export interface RecentPage {
+  pageId: string;
+  pageName: string;
+  projectId: string;
+  projectName: string;
+  visitedAt: string;
+}
+
 export interface DashboardStats {
   totalProjects: number;
   totalPages: number;
@@ -52,16 +66,17 @@ export interface DashboardStats {
 export interface DashboardData {
   stats: DashboardStats;
   projects: DashboardProject[];
+  pinnedProjects: DashboardProject[];
+  favoriteProjects: DashboardProject[];
   recentProjects: DashboardProject[];
+  recentPages: RecentPage[];
   pendingRequests: DashboardPendingRequest[];
   recentActivity: DashboardActivity[];
   collaborators: DashboardCollaborator[];
 }
 
 export function useDashboard() {
-  const api = useApi();
-  const apiRef = useRef(api);
-  apiRef.current = api;
+  const apiRef = useRef(useApi());
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,7 +86,13 @@ export function useDashboard() {
     try {
       setLoading(true);
       const res = await apiRef.current.get("dashboard");
-      setData(res);
+      setData({
+        ...res,
+        pinnedProjects: res.pinnedProjects ?? [],
+        favoriteProjects: res.favoriteProjects ?? [],
+        recentProjects: res.recentProjects ?? [],
+        recentPages: res.recentPages ?? [],
+      });
       setError(null);
     } catch (err) {
       console.error(err);

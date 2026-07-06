@@ -86,6 +86,15 @@ export default function ProjectsPage() {
     }
   }, [fetchProjects]);
 
+  const handleTogglePin = useCallback(async (project: IProject) => {
+    try {
+      await apiRef.current.post(`project/${project.id}/toggle-pin`);
+      fetchProjects();
+    } catch {
+      toast.error("Failed to update pin");
+    }
+  }, [fetchProjects]);
+
   const handleToggleArchive = useCallback(async (project: IProject) => {
     if (!project.membershipId) return;
     try {
@@ -219,6 +228,7 @@ export default function ProjectsPage() {
                 onDuplicate={handleDuplicate}
                 onToggleFavorite={handleToggleFavorite}
                 onToggleArchive={handleToggleArchive}
+                onTogglePin={handleTogglePin}
                 onSettings={handleSettings}
               />
             ))}

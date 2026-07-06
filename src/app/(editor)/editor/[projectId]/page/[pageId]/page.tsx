@@ -49,6 +49,7 @@ export default function EditorPage() {
   const [initialNodes, setInitialNodes] = useState<Node[] | null>(null);
   const [role, setRole] = useState<Role | null>(null);
   const [projectName, setProjectName] = useState<string>("");
+  const visitedRef = useRef(false);
   const [accessState, setAccessState] = useState<
     "loading" | "granted" | "denied" | "error"
   >("loading");
@@ -74,6 +75,12 @@ export default function EditorPage() {
           toast.error("Failed to load canvas data");
         }
       });
+  }, [pageId, projectId]);
+
+  useEffect(() => {
+    if (visitedRef.current) return;
+    visitedRef.current = true;
+    api.post(`project/${projectId}/pages/${pageId}/visit`).catch(() => {});
   }, [pageId, projectId]);
 
   if (accessState === "loading") return <LoadingOverlay isLoading />;

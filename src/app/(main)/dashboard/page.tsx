@@ -10,6 +10,9 @@ import { ProjectsSection } from "@/components/dashboard/ProjectsSection";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { PendingRequests } from "@/components/dashboard/PendingRequests";
 import { RecentCollaborations } from "@/components/dashboard/RecentCollaborations";
+import { PinnedProjects } from "@/components/dashboard/PinnedProjects";
+import { FavoriteProjects } from "@/components/dashboard/FavoriteProjects";
+import { RecentPages } from "@/components/dashboard/RecentPages";
 
 export default function DashboardPage() {
   const { data, loading, error, refresh } = useDashboard();
@@ -56,6 +59,18 @@ export default function DashboardPage() {
       ) : data ? (
         <>
           <OverviewCards stats={data.stats} />
+
+          {data.pinnedProjects?.length > 0 && (
+            <PinnedProjects projects={data.pinnedProjects} />
+          )}
+
+          {data.favoriteProjects?.length > 0 && (
+            <FavoriteProjects projects={data.favoriteProjects} />
+          )}
+
+          {data.recentPages?.length > 0 && (
+            <RecentPages pages={data.recentPages} />
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">

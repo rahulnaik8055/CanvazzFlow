@@ -16,6 +16,7 @@ import {
   FolderOpen,
   Heart,
   Archive,
+  Pin,
   Settings as SettingsIcon,
 } from "lucide-react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
@@ -35,6 +36,7 @@ export interface IProject {
   pagesCount?: number;
   isFavorited?: boolean;
   isArchived?: boolean;
+  isPinned?: boolean;
   membershipId?: string;
   lastOpenedAt?: string | null;
   owner?: {
@@ -60,6 +62,7 @@ interface ProjectCardProps {
   onDuplicate?: (project: IProject) => void;
   onToggleFavorite?: (project: IProject) => void;
   onToggleArchive?: (project: IProject) => void;
+  onTogglePin?: (project: IProject) => void;
   onSettings?: (project: IProject) => void;
 }
 
@@ -126,6 +129,7 @@ export function ProjectCard({
   onDuplicate,
   onToggleFavorite,
   onToggleArchive,
+  onTogglePin,
   onSettings,
 }: ProjectCardProps) {
   const [favorite, setFavorite] = useState(project.isFavorited ?? false);
@@ -146,26 +150,17 @@ export function ProjectCard({
   const owner = ownerDisplay(project.owner, project.User);
   const gradient = thumbnailGradient(project.id);
 
+  const isOwner = project.myRole === "owner";
+
   const menuItems = [
-    {
-      label: "Open Project",
-      icon: <ExternalLink size={12} />,
-      onClick: () => onClick?.(project),
-    },
-    {
-      label: favorite ? "Remove Favorite" : "Add to Favorites",
-      icon: <Heart size={12} />,
-      onClick: handleStar,
-    },
-    {
-      label: project.isArchived ? "Unarchive" : "Archive",
-      icon: <Archive size={12} />,
-      onClick: () => onToggleArchive?.(project),
-    },
+    { label: "Open Project", icon: <ExternalLink size={12} />, onClick: () => onClick?.(project) },
+    { label: project.isPinned ? "Unpin" : "Pin Project", icon: <Pin size={12} />, onClick: () => onTogglePin?.(project) },
+    { label: favorite ? "Remove Favorite" : "Add to Favorites", icon: <Heart size={12} />, onClick: handleStar },
+    { label: project.isArchived ? "Unarchive" : "Archive", icon: <Archive size={12} />, onClick: () => onToggleArchive?.(project) },
     { label: "Rename", icon: <Pencil size={12} />, onClick: () => onRename?.(project) },
     { label: "Duplicate", icon: <Copy size={12} />, onClick: () => onDuplicate?.(project) },
-    { label: "Settings", icon: <SettingsIcon size={12} />, onClick: () => onSettings?.(project) },
-    { label: "Delete", icon: <Trash2 size={12} />, danger: true, onClick: () => onDelete?.(project) },
+    ...(isOwner ? [{ label: "Settings", icon: <SettingsIcon size={12} />, onClick: () => onSettings?.(project) }] : []),
+    ...(isOwner ? [{ label: "Delete", icon: <Trash2 size={12} />, danger: true, onClick: () => onDelete?.(project) }] : []),
   ];
 
   return (
@@ -189,20 +184,34 @@ export function ProjectCard({
 
           <button
             onClick={handleStar}
-            className={`absolute top-2 left-2 p-1.5 rounded-lg transition-all ${
+            className={`absolute top-2 left-2 p-1.5 rounded-lg transition-all z-10 ${
               favorite
                 ? "text-amber-400 bg-white/80 hover:bg-white"
-                : "text-white/0 hover:text-amber-400 bg-white/0 hover:bg-white/80 opacity-0 group-hover:opacity-100"
+                : "text-gray-400 hover:text-amber-400 bg-white/0 hover:bg-white/80 opacity-0 group-hover:opacity-100"
             }`}
           >
             <Star size={13} fill={favorite ? "currentColor" : "none"} />
           </button>
 
-          <div className="absolute top-2 right-2">
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            {project.isPinned && (
+              <div className="p-1 rounded-lg bg-white/80 text-gray-500">
+                <Pin size={11} />
+              </div>
+            )}
+            {isOwner && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onSettings?.(project); }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 bg-white/0 hover:bg-white/80 opacity-0 group-hover:opacity-100 transition-all"
+                title="Settings"
+              >
+                <SettingsIcon size={13} />
+              </button>
+            )}
             <DropdownMenu
               align="end"
               trigger={
-                <div className="p-1.5 rounded-lg bg-white/0 hover:bg-white/80 text-white/0 hover:text-gray-700 opacity-0 group-hover:opacity-100 transition-all">
+                <div className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 bg-white/0 hover:bg-white/80 opacity-0 group-hover:opacity-100 transition-all">
                   <MoreHorizontal size={14} />
                 </div>
               }
@@ -272,6 +281,16 @@ export function ProjectCard({
                 {timeAgo(project.updatedAt)}
               </span>
             </div>
+
+            {isOwner && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onSettings?.(project); }}
+                className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <SettingsIcon size={12} />
+                Settings
+              </button>
+            )}
           </div>
         </div>
       </div>

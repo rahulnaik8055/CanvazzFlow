@@ -103,17 +103,22 @@ model Node {
 }
 
 model ProjectMember {
-  id        String     @id @default(cuid())
-  projectId String
-  userId    String
-  role      MemberRole @default(editor)
-  joinedAt  DateTime   @default(now())
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String     @id @default(cuid())
+  projectId   String
+  userId      String
+  role        MemberRole @default(editor)
+  joinedAt    DateTime   @default(now())
+  favoritedAt DateTime?
+  archivedAt  DateTime?
+  lastOpenedAt DateTime?
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
   @@index([userId])
   @@index([projectId])
+  @@index([archivedAt])
+  @@index([favoritedAt])
 }
 
 model ProjectInvitation {

@@ -1,13 +1,3 @@
-/**
- * projects.controller.ts
- *
- * GET    /projects          → my projects
- * GET    /projects/search   → search public projects
- * GET    /projects/:id      → single project (members only)
- * POST   /projects          → create project
- * DELETE /projects/:id      → delete project (owner only)
- */
-
 import {
   Controller,
   Get,
@@ -32,8 +22,23 @@ export class ProjectsController {
   constructor(private projectsService: ProjectsService) {}
 
   @Get()
-  getMyProjects(@Req() req: Request) {
-    return this.projectsService.getMyProjects(req['userId']);
+  findAll(
+    @Req() req: Request,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('sort') sort?: string,
+    @Query('filter') filter?: string,
+    @Query('favoriteIds') favoriteIds?: string,
+  ) {
+    return this.projectsService.findAll(req['userId'], {
+      search,
+      sort,
+      filter,
+      favoriteIds: favoriteIds?.split(',').filter(Boolean),
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 12,
+    });
   }
 
   @Get('search')
@@ -64,12 +69,12 @@ export class ProjectsController {
   @Patch(':id')
   @UseGuards(ProjectRoleGuard)
   @ProjectRoles('owner')
-  renameProject(
+  updateProject(
     @Param('id') id: string,
-    @Body() body: { name: string },
+    @Body() body: { name?: string; description?: string; visibility?: 'public' | 'private'; thumbnail?: string },
     @Req() req,
   ) {
-    return this.projectsService.renameProject(id, body.name, req['userId']);
+    return this.projectsService.updateProject(id, req['userId'], body);
   }
 
   @Delete(':id')
@@ -77,5 +82,43 @@ export class ProjectsController {
   @ProjectRoles('owner')
   deleteProject(@Param('id') id: string, @Req() req: Request) {
     return this.projectsService.deleteProject(id, req['userId']);
+  }
+
+  @Post('membership/:membershipId/toggle-favorite')
+  toggleFavorite(@Param('membershipId') membershipId: string, @Req() req: Request) {
+    return this.projectsService.toggleFavorite(membershipId, req['userId']);
+  }
+
+  @Post('membership/:membershipId/toggle-archive')
+  toggleArchive(@Param('membershipId') membershipId: string, @Req() req: Request) {
+    return this.projectsService.toggleArchive(membershipId, req['userId']);
+  }
+
+  @Post(':id/record-open')
+  recordOpen(@Param('id') id: string, @Req() req: Request) {
+    return this.projectsService.recordOpen(id, req['userId']);
+  }
+
+  @Get(':id/settings')
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('viewer', 'editor', 'owner')
+  getSettings(@Param('id') id: string, @Req() req: Request) {
+    return this.projectsService.getSettings(id, req['userId']);
+  }
+
+  @Post(':id/toggle-archive')
+  toggleArchiveByProject(@Param('id') id: string, @Req() req: Request) {
+    return this.projectsService.toggleArchiveByProject(id, req['userId']);
+  }
+
+  @Post(':id/transfer-ownership')
+  @UseGuards(ProjectRoleGuard)
+  @ProjectRoles('owner')
+  transferOwnership(
+    @Param('id') id: string,
+    @Body() body: { userId: string },
+    @Req() req,
+  ) {
+    return this.projectsService.transferOwnership(id, body.userId, req['userId']);
   }
 }

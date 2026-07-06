@@ -8,17 +8,20 @@ datasource db {
 }
 
 model User {
-  id             String          @id
-  email          String          @unique
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  firstName      String?
-  imageUrl       String?
-  lastName       String?
-  accessRequests AccessRequest[]
-  projects       Project[]
-  memberships    ProjectMember[]
-  notifications  Notification[]
+  id                  String               @id
+  email               String               @unique
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  firstName           String?
+  imageUrl            String?
+  lastName            String?
+  accessRequests      AccessRequest[]
+  accessRequestEvents AccessRequestEvent[]
+  projects            Project[]
+  memberships         ProjectMember[]
+  notifications       Notification[]
+  sentInvitations     ProjectInvitation[]  @relation("InvitedBy")
+  receivedInvitations ProjectInvitation[]  @relation("UserInvitation")
 }
 
 model Notification {
@@ -37,17 +40,18 @@ model Notification {
 }
 
 model Project {
-  id             String            @id @default(cuid())
+  id             String              @id @default(cuid())
   name           String
   description    String?
   thumbnail      String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
   ownerId        String
-  visibility     ProjectVisibility @default(public)
+  visibility     ProjectVisibility   @default(public)
   accessRequests AccessRequest[]
+  invitations    ProjectInvitation[]
   pages          Page[]
-  User           User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  User           User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   members        ProjectMember[]
 
   @@index([ownerId])
@@ -112,20 +116,64 @@ model ProjectMember {
   @@index([projectId])
 }
 
+model ProjectInvitation {
+  id          String           @id @default(cuid())
+  projectId   String
+  invitedById String
+  email       String?
+  userId      String?
+  token       String           @unique @default(cuid())
+  status      InvitationStatus @default(pending)
+  expiresAt   DateTime
+  message     String?
+  role        MemberRole       @default(editor)
+  oneTime     Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy   User             @relation("InvitedBy", fields: [invitedById], references: [id])
+  user        User?            @relation("UserInvitation", fields: [userId], references: [id])
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+  @@index([token])
+}
+
 model AccessRequest {
-  id        String        @id @default(cuid())
-  projectId String
-  userId    String
-  status    RequestStatus @default(pending)
-  message   String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String        @id @default(cuid())
+  projectId     String
+  userId        String
+  status        RequestStatus @default(pending)
+  message       String?
+  requestedRole String        @default("editor")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  events AccessRequestEvent[]
 
   @@unique([projectId, userId])
   @@index([userId])
   @@index([projectId])
+  @@index([status])
+}
+
+model AccessRequestEvent {
+  id              String         @id @default(cuid())
+  accessRequestId String
+  fromStatus      RequestStatus?
+  toStatus        RequestStatus
+  changedById     String?
+  reason          String?
+  createdAt       DateTime       @default(now())
+  accessRequest   AccessRequest  @relation(fields: [accessRequestId], references: [id], onDelete: Cascade)
+  changedBy       User?          @relation(fields: [changedById], references: [id])
+
+  @@index([accessRequestId])
+  @@index([changedById])
 }
 
 enum NodeType {
@@ -154,8 +202,16 @@ enum MemberRole {
   viewer
 }
 
+enum InvitationStatus {
+  pending
+  accepted
+  cancelled
+  expired
+}
+
 enum RequestStatus {
   pending
   approved
   denied
+  cancelled
 }

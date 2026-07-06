@@ -14,6 +14,8 @@ import { ProjectMembersModule } from './project-members/project-members.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { InvitationsModule } from './invitations/invitations.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
     ProjectMembersModule,
     NotificationsModule,
     DashboardModule,
+    InvitationsModule,
+    SearchModule,
   ],
   controllers: [AppController, ProjectMembersController],
   providers: [AppService, ProjectMembersService],

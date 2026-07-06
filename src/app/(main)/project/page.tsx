@@ -5,8 +5,6 @@ import { useApi } from "@/lib/api";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/PageShell";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Pagination,
   PaginationContent,
@@ -43,6 +41,8 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<IProject | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const debouncedSearch = useDebounce(search);
   const router = useRouter();
 
@@ -85,7 +85,56 @@ export default function ProjectsPage() {
     }
   };
 
-  console.log(projects);
+  const handleRename = useCallback(
+    async (project: IProject) => {
+      setRenameTarget(project);
+      setRenameValue(project.name);
+    },
+    [],
+  );
+
+  const handleRenameSubmit = useCallback(async () => {
+    if (!renameTarget || !renameValue.trim()) return;
+    try {
+      await api.patch(`project/${renameTarget.id}`, { name: renameValue.trim() });
+      toast.success("Project renamed");
+      setRenameTarget(null);
+      fetchProjects();
+    } catch {
+      toast.error("Failed to rename project");
+    }
+  }, [renameTarget, renameValue, api, fetchProjects]);
+
+  const handleDelete = useCallback(
+    async (project: IProject) => {
+      if (!window.confirm(`Delete "${project.name}"? This cannot be undone.`)) return;
+      try {
+        await api.delete(`project/${project.id}`);
+        toast.success("Project deleted");
+        fetchProjects();
+      } catch {
+        toast.error("Failed to delete project");
+      }
+    },
+    [api, fetchProjects],
+  );
+
+  const handleDuplicate = useCallback(
+    async (project: IProject) => {
+      try {
+        await api.post("project", {
+          name: `${project.name} (copy)`,
+          description: project.description,
+          visibility: project.visibility,
+        });
+        toast.success("Project duplicated");
+        fetchProjects();
+      } catch {
+        toast.error("Failed to duplicate project");
+      }
+    },
+    [api, fetchProjects],
+  );
 
   return (
     <div>
@@ -122,6 +171,9 @@ export default function ProjectsPage() {
                 key={project.id}
                 project={project}
                 onClick={() => router.push(`/project/${project.id}/pages`)}
+                onRename={handleRename}
+                onDelete={handleDelete}
+                onDuplicate={handleDuplicate}
               />
             ))}
         </div>
@@ -190,6 +242,35 @@ export default function ProjectsPage() {
         onClose={() => setModalOpen(false)}
         onSubmit={handleCreate}
       />
+
+      {renameTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-5 w-80">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Rename Project</h3>
+            <input
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleRenameSubmit()}
+              className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 mb-3"
+              autoFocus
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setRenameTarget(null)}
+                className="px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRenameSubmit}
+                className="px-3 py-1.5 text-xs text-white bg-gray-900 hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

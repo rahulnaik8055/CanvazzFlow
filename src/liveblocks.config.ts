@@ -7,7 +7,7 @@ export const client = createClient({
   authEndpoint: async (room) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/liveblocks-auth`,
+        `${process.env.NEXT_PUBLIC_API_URL}/liveblocks/auth`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

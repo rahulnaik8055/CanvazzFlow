@@ -306,7 +306,7 @@ export default function LandingPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <SignInButton mode="modal" fallbackRedirectUrl="/project">
+              <SignInButton mode="modal" fallbackRedirectUrl="/sync">
                 <button className="rounded-xl px-5 py-2.5 text-sm font-semibold border border-gray-200 bg-white/80 text-gray-700 hover:bg-white hover:border-blue-300 hover:scale-[1.02] transition-all">
                   Sign In
                 </button>

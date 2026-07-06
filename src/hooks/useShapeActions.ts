@@ -14,7 +14,7 @@ export const useShapeActions = (
   stagePosition: { x: number; y: number },
   canvasSize: { width: number; height: number },
   stageScale: number,
-  setSelectedId: (id: string | null) => void,
+  setSelectedIds: (ids: string[]) => void,
   setTool: (tool: "select" | "pan") => void,
   setError: (error: string | null) => void,
 ) => {
@@ -116,7 +116,7 @@ export const useShapeActions = (
         const newNodes = [...nodes, newNode];
         setNodes(newNodes);
         saveToHistory(newNodes);
-        setSelectedId(newNode.id);
+        setSelectedIds([newNode.id]);
         setTool("select");
       } catch (err) {
         setError("Failed to add shape. Please try again.");
@@ -130,46 +130,51 @@ export const useShapeActions = (
       stageScale,
       setNodes,
       saveToHistory,
-      setSelectedId,
+      setSelectedIds,
       setTool,
       setError,
     ],
   );
 
   const duplicateShape = useCallback(
-    (selectedId: string | null) => {
-      if (selectedId) {
-        const selectedNode = nodes.find((n) => n.id === selectedId);
-        if (selectedNode) {
-          const maxZIndex =
-            nodes.length > 0 ? Math.max(...nodes.map((n) => n.zIndex)) : 0;
-          const newNode: Node = {
-            ...selectedNode,
-            id: generateId(),
-            x: selectedNode.x + 20,
-            y: selectedNode.y + 20,
-            zIndex: maxZIndex + 1,
-          };
-          const newNodes = [...nodes, newNode];
-          setNodes(newNodes);
-          saveToHistory(newNodes);
-          setSelectedId(newNode.id);
-        }
-      }
+    (selectedIds: string[]) => {
+      if (selectedIds.length === 0) return;
+      const maxZIndex =
+        nodes.length > 0 ? Math.max(...nodes.map((n) => n.zIndex)) : 0;
+      const newNodes = [...nodes];
+      const newIds: string[] = [];
+
+      selectedIds.forEach((id) => {
+        const node = nodes.find((n) => n.id === id);
+        if (!node) return;
+        const newId = generateId();
+        newIds.push(newId);
+        newNodes.push({
+          ...node,
+          id: newId,
+          x: node.x + 20,
+          y: node.y + 20,
+          zIndex: maxZIndex + 1 + newIds.length,
+        });
+      });
+
+      setNodes(newNodes);
+      saveToHistory(newNodes);
+      setSelectedIds(newIds);
     },
-    [nodes, setNodes, saveToHistory, setSelectedId],
+    [nodes, setNodes, saveToHistory, setSelectedIds],
   );
 
   const deleteShape = useCallback(
-    (selectedId: string | null) => {
-      if (selectedId) {
-        const newNodes = nodes.filter((n) => n.id !== selectedId);
-        setNodes(newNodes);
-        saveToHistory(newNodes);
-        setSelectedId(null);
-      }
+    (selectedIds: string[]) => {
+      if (selectedIds.length === 0) return;
+      const idSet = new Set(selectedIds);
+      const newNodes = nodes.filter((n) => !idSet.has(n.id));
+      setNodes(newNodes);
+      saveToHistory(newNodes);
+      setSelectedIds([]);
     },
-    [nodes, setNodes, saveToHistory, setSelectedId],
+    [nodes, setNodes, saveToHistory, setSelectedIds],
   );
 
   const updateNodeProperty = useCallback(

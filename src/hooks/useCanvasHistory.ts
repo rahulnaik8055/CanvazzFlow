@@ -18,12 +18,12 @@ export const useCanvasHistory = (initialNodes: Node[] = []) => {
   const undo = useCallback(
     (
       setNodes: (nodes: Node[]) => void,
-      setSelectedId: (id: string | null) => void
+      setSelectedIds: (ids: string[]) => void
     ) => {
       if (historyStep > 0) {
         setHistoryStep(historyStep - 1);
         setNodes(history[historyStep - 1]);
-        setSelectedId(null);
+        setSelectedIds([]);
       }
     },
     [history, historyStep]
@@ -32,12 +32,12 @@ export const useCanvasHistory = (initialNodes: Node[] = []) => {
   const redo = useCallback(
     (
       setNodes: (nodes: Node[]) => void,
-      setSelectedId: (id: string | null) => void
+      setSelectedIds: (ids: string[]) => void
     ) => {
       if (historyStep < history.length - 1) {
         setHistoryStep(historyStep + 1);
         setNodes(history[historyStep + 1]);
-        setSelectedId(null);
+        setSelectedIds([]);
       }
     },
     [history, historyStep]

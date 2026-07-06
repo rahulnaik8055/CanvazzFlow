@@ -54,7 +54,7 @@ interface TopToolbarProps {
   role: Role;
   onSave: () => void;
   onBack: () => void;
-  selectedId: string | null;
+  selectedIds: string[];
   canEdit: boolean;
   alignment: AlignmentHandlers;
 }
@@ -74,7 +74,7 @@ export default function TopToolbar({
   role,
   onSave,
   onBack,
-  selectedId,
+  selectedIds,
   canEdit,
   alignment,
 }: TopToolbarProps) {
@@ -133,26 +133,26 @@ export default function TopToolbar({
           </button>
         </div>
 
-        {selectedId && canEdit && (
+        {selectedIds.length > 0 && canEdit && (
           <>
             <div className="w-px h-5 bg-gray-200 mx-1" />
             <div className="flex items-center gap-0.5">
               <button
-                onClick={() => alignment.alignLeft([selectedId])}
+                onClick={() => alignment.alignLeft(selectedIds)}
                 className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 title="Align left"
               >
                 <AlignStartVertical size={14} />
               </button>
               <button
-                onClick={() => alignment.alignCenterX([selectedId])}
+                onClick={() => alignment.alignCenterX(selectedIds)}
                 className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 title="Align center horizontally"
               >
                 <AlignCenterVertical size={14} />
               </button>
               <button
-                onClick={() => alignment.alignRight([selectedId])}
+                onClick={() => alignment.alignRight(selectedIds)}
                 className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 title="Align right"
               >
@@ -160,21 +160,21 @@ export default function TopToolbar({
               </button>
               <div className="w-px h-4 bg-gray-200 mx-0.5" />
               <button
-                onClick={() => alignment.alignTop([selectedId])}
+                onClick={() => alignment.alignTop(selectedIds)}
                 className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 title="Align top"
               >
                 <AlignStartHorizontal size={14} />
               </button>
               <button
-                onClick={() => alignment.alignCenterY([selectedId])}
+                onClick={() => alignment.alignCenterY(selectedIds)}
                 className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 title="Align center vertically"
               >
                 <AlignCenterHorizontal size={14} />
               </button>
               <button
-                onClick={() => alignment.alignBottom([selectedId])}
+                onClick={() => alignment.alignBottom(selectedIds)}
                 className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 title="Align bottom"
               >
@@ -182,14 +182,14 @@ export default function TopToolbar({
               </button>
               <div className="w-px h-4 bg-gray-200 mx-0.5" />
               <button
-                onClick={() => alignment.distributeHorizontally([selectedId])}
+                onClick={() => alignment.distributeHorizontally(selectedIds)}
                 className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 title="Distribute horizontally"
               >
                 <Columns3 size={14} />
               </button>
               <button
-                onClick={() => alignment.distributeVertically([selectedId])}
+                onClick={() => alignment.distributeVertically(selectedIds)}
                 className="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                 title="Distribute vertically"
               >

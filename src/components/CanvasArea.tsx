@@ -31,6 +31,7 @@ import {
 import { Node } from "@/types/CanvasTypes";
 import { GRID_SIZE, MIN_SIZE } from "@/constants/CanvasConstants";
 import { SnapGuide } from "@/hooks/useSnapping";
+import { SelectionRect } from "@/hooks/useCanvasInteractions";
 
 interface CanvasAreaProps {
   addShape: (
@@ -42,14 +43,14 @@ interface CanvasAreaProps {
   stageScale: number;
   stagePosition: { x: number; y: number };
   showGrid: boolean;
-  selectedId: string | null;
+  selectedIds: string[];
   tool: "select" | "pan";
   zoomIn: () => void;
   zoomOut: () => void;
   resetView: () => void;
   stageRef: React.RefObject<Konva.Stage>;
   transformerRef: React.RefObject<Konva.Transformer | null>;
-  handleSelect: (id: string | null) => void;
+  handleSelect: (id: string | null, metaKey?: boolean, shiftKey?: boolean) => void;
   handleDrag: (id: string, e: Konva.KonvaEventObject<DragEvent>) => void;
   handleDragStart: (id: string) => void;
   handleDragMove: (id: string, e: Konva.KonvaEventObject<DragEvent>) => void;
@@ -58,9 +59,10 @@ interface CanvasAreaProps {
   handleWheel: (e: Konva.KonvaEventObject<WheelEvent>) => void;
   handleStageMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   handleStageMouseMove: (e: Konva.KonvaEventObject<MouseEvent>) => void;
-  handleStageMouseUp: () => void;
+  handleStageMouseUp: (e: Konva.KonvaEventObject<MouseEvent>) => void;
   onMouseLeave: () => void;
   guides: SnapGuide[];
+  selectionRect: SelectionRect | null;
 }
 
 const ImageNode = ({ node, commonProps }: { node: Node; commonProps: any }) => {
@@ -172,6 +174,22 @@ export default function CanvasArea(props: CanvasAreaProps) {
     });
   }, [props.guides]);
 
+  const selectionRectNode = useMemo(() => {
+    if (!props.selectionRect) return null;
+    return (
+      <Rect
+        x={props.selectionRect.x}
+        y={props.selectionRect.y}
+        width={props.selectionRect.width}
+        height={props.selectionRect.height}
+        fill="rgba(59,130,246,0.1)"
+        stroke="#3b82f6"
+        strokeWidth={1 / props.stageScale}
+        dash={[4 / props.stageScale, 4 / props.stageScale]}
+      />
+    );
+  }, [props.selectionRect, props.stageScale]);
+
   return (
     <div className="flex-1 relative bg-gray-50 mt-14 overflow-hidden">
       <Stage
@@ -204,7 +222,8 @@ export default function CanvasArea(props: CanvasAreaProps) {
               opacity: node.opacity,
               zIndex: node.zIndex,
               draggable: props.tool === "select",
-              onClick: () => props.handleSelect(node.id),
+              onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
+                props.handleSelect(node.id, e.evt.metaKey, e.evt.shiftKey),
               onTap: () => props.handleSelect(node.id),
               onDragStart: () => props.handleDragStart(node.id),
               onDragMove: (e: Konva.KonvaEventObject<DragEvent>) =>
@@ -303,7 +322,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
             return null;
           })}
 
-            {props.selectedId && props.tool === "select" && (
+            {props.selectedIds.length > 0 && props.tool === "select" && (
             <Transformer
               ref={props.transformerRef}
               boundBoxFunc={(oldBox, newBox) => {
@@ -325,6 +344,10 @@ export default function CanvasArea(props: CanvasAreaProps) {
 
         <Layer zIndex={2} listening={false}>
           {guideLines}
+        </Layer>
+
+        <Layer zIndex={3} listening={false}>
+          {selectionRectNode}
         </Layer>
       </Stage>
 

@@ -162,7 +162,7 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
       root.nodes ? (Object.values(root.nodes) as Node[]) : ([] as Node[]),
     ) ?? [];
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [tool, setTool] = useState<"select" | "pan">("select");
   const [stageScale, setStageScale] = useState(1);
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
@@ -252,7 +252,7 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
       stagePosition,
       canvasSize,
       stageScale,
-      setSelectedId,
+      setSelectedIds,
       setTool,
       setError,
     );
@@ -266,20 +266,20 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   );
 
   const deleteShapeAndSync = useCallback(
-    (id: string | null) => {
-      if (!id || !canEdit) return;
-      deleteShape(id);
-      deleteNode(id);
-      setSelectedId(null);
+    (ids: string[]) => {
+      if (ids.length === 0 || !canEdit) return;
+      deleteShape(ids);
+      ids.forEach((id) => deleteNode(id));
+      setSelectedIds([]);
       updateMyPresence({ selectedId: null });
     },
     [deleteShape, deleteNode, updateMyPresence, canEdit],
   );
 
   const duplicateShapeAndSync = useCallback(
-    (id: string | null) => {
-      if (!id || !canEdit) return;
-      duplicateShape(id);
+    (ids: string[]) => {
+      if (ids.length === 0 || !canEdit) return;
+      duplicateShape(ids);
     },
     [duplicateShape, canEdit],
   );
@@ -316,17 +316,19 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   const {
     handleSelect,
     handleDrag,
+    handleDragStart: hookDragStart,
     handleTransform,
     handleTransformEnd,
     handleWheel,
     handleStageMouseDown,
     handleStageMouseMove,
     handleStageMouseUp,
+    selectionRect,
   } = useCanvasInteractions(
     nodes,
     syncSetNodes,
     saveToHistory,
-    setSelectedId,
+    setSelectedIds,
     setError,
     stageRef,
     stageScale,
@@ -338,13 +340,15 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     lastPointerPosition,
     setLastPointerPosition,
     tool,
+    selectedIds,
   );
 
   const handleDragStart = useCallback(
     (id: string) => {
+      hookDragStart(id);
       prepareSnapTargets(nodes, id);
     },
-    [nodes, prepareSnapTargets],
+    [hookDragStart, nodes, prepareSnapTargets],
   );
 
   const handleDragMove = useCallback(
@@ -379,9 +383,9 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   );
 
   const handleSelectAndBroadcast = useCallback(
-    (...args: Parameters<typeof handleSelect>) => {
-      handleSelect(...args);
-      updateMyPresence({ selectedId: args[0] as string | null });
+    (id: string | null, metaKey?: boolean, shiftKey?: boolean) => {
+      handleSelect(id, metaKey, shiftKey);
+      updateMyPresence({ selectedId: id });
     },
     [handleSelect, updateMyPresence],
   );
@@ -403,26 +407,27 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     if (!canEdit) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey)) return;
-      switch (e.key) {
-        case "z":
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) historyRedo(syncSetNodes, setSelectedIds);
+        else historyUndo(syncSetNodes, setSelectedIds);
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        if (selectedIds.length > 0) {
           e.preventDefault();
-          if (e.shiftKey) historyRedo(syncSetNodes, setSelectedId);
-          else historyUndo(syncSetNodes, setSelectedId);
-          break;
-        case "c":
-          if (selectedId) {
-            e.preventDefault();
-            duplicateShapeAndSync(selectedId);
-          }
-          break;
-        case "Delete":
-        case "Backspace":
-          if (selectedId) {
-            e.preventDefault();
-            deleteShapeAndSync(selectedId);
-          }
-          break;
+          duplicateShapeAndSync(selectedIds);
+        }
+        return;
+      }
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedIds.length > 0) {
+          e.preventDefault();
+          deleteShapeAndSync(selectedIds);
+        }
+        return;
       }
     };
 
@@ -430,7 +435,7 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     canEdit,
-    selectedId,
+    selectedIds,
     historyUndo,
     historyRedo,
     syncSetNodes,
@@ -452,27 +457,35 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   useEffect(() => {
     if (
       tool === "select" &&
-      selectedId &&
+      selectedIds.length > 0 &&
       transformerRef.current &&
       stageRef.current
     ) {
-      const node = stageRef.current.findOne(`#${selectedId}`);
-      if (node) {
-        transformerRef.current.nodes([node]);
+      const stage = stageRef.current;
+      const nodesToTransform = selectedIds
+        .map((id) => stage.findOne(`#${id}`))
+        .filter(Boolean) as Konva.Node[];
+      if (nodesToTransform.length > 0) {
+        transformerRef.current.nodes(nodesToTransform);
         transformerRef.current.getLayer()?.batchDraw();
       }
+    } else if (selectedIds.length === 0 && transformerRef.current) {
+      transformerRef.current.nodes([]);
+      transformerRef.current.getLayer()?.batchDraw();
     }
-  }, [selectedId, nodes, tool]);
+  }, [selectedIds, nodes, tool]);
 
-  const selectedNode = nodes.find((n) => n.id === selectedId) || null;
+  const selectedNode = selectedIds.length === 1
+    ? nodes.find((n) => n.id === selectedIds[0]) || null
+    : null;
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-gray-50 font-sans">
       <TopToolbar
         tool={tool}
         setTool={setTool}
-        undo={() => historyUndo(syncSetNodes, setSelectedId)}
-        redo={() => historyRedo(syncSetNodes, setSelectedId)}
+        undo={() => historyUndo(syncSetNodes, setSelectedIds)}
+        redo={() => historyRedo(syncSetNodes, setSelectedIds)}
         zoomIn={zoomIn}
         zoomOut={zoomOut}
         resetView={resetView}
@@ -483,7 +496,7 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
         role={role}
         onSave={() => {}}
         onBack={() => router.back()}
-        selectedId={selectedId}
+        selectedIds={selectedIds}
         canEdit={canEdit}
         alignment={{
           alignLeft,
@@ -515,7 +528,7 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
           stageScale={stageScale}
           stagePosition={stagePosition}
           showGrid={showGrid}
-          selectedId={selectedId}
+          selectedIds={selectedIds}
           tool={tool}
           zoomIn={zoomIn}
           zoomOut={zoomOut}
@@ -534,6 +547,7 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
           handleStageMouseUp={handleStageMouseUp}
           onMouseLeave={handleMouseLeaveForCursor}
           guides={guides}
+          selectionRect={selectionRect}
         />
 
         <CollaboratorCursors
@@ -546,8 +560,8 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
       <InspectorPanel
         selectedNode={selectedNode}
         updateNodeProperty={updatePropertyAndSync}
-        duplicateShape={() => duplicateShapeAndSync(selectedId)}
-        deleteShape={() => deleteShapeAndSync(selectedId)}
+        duplicateShape={() => duplicateShapeAndSync(selectedIds)}
+        deleteShape={() => deleteShapeAndSync(selectedIds)}
         canEdit={canEdit}
       />
 

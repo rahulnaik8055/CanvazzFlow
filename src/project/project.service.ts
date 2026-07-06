@@ -42,8 +42,8 @@ export class ProjectsService {
       include: {
         project: {
           include: {
-            User: { select: { id: true, firstName: true, lastName: true } },
-            _count: { select: { members: true } },
+            User: { select: { id: true, firstName: true, lastName: true, imageUrl: true } },
+            _count: { select: { members: true, pages: true } },
           },
         },
       },
@@ -52,8 +52,10 @@ export class ProjectsService {
 
     return memberships.map((m) => ({
       ...m.project,
+      owner: m.project.User,
       myRole: m.role,
       memberCount: m.project._count.members,
+      pagesCount: m.project._count.pages,
     }));
   }
 

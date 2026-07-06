@@ -32,7 +32,13 @@ export const client = createClient({
 type Presence = {
   cursor: { x: number; y: number } | null;
   selectedId: string | null;
+  selectedName: string | null;
   userName: string;
+  userAvatar: string;
+  userColor: string;
+  page: string;
+  lastActive: number;
+  isIdle: boolean;
 };
 
 type Storage = {

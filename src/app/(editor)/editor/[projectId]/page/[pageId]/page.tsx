@@ -4,8 +4,10 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import Konva from "konva";
 import { useParams, useRouter } from "next/navigation";
 import { useApi } from "@/lib/api";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
+import { getUserColor } from "@/lib/presence";
+import { useIdleDetection } from "@/hooks/useIdleDetection";
 
 import {
   RoomProvider,
@@ -27,6 +29,7 @@ import { useSnapping } from "@/hooks/useSnapping";
 import { useAlignment } from "@/hooks/useAlignment";
 import InspectorPanel from "@/components/InspectorPanel";
 import CanvasArea from "@/components/CanvasArea";
+import LayersPanel from "@/components/LayersPanel";
 import LeftSidebar from "@/components/LeftSidebar";
 import TopToolbar from "@/components/TopToolbar";
 import CollaboratorCursors from "@/components/editor/CollaboratorCursors";
@@ -99,13 +102,19 @@ export default function EditorPage() {
       initialPresence={{
         cursor: null,
         selectedId: null,
+        selectedName: null,
         userName: "Anonymous",
+        userAvatar: "",
+        userColor: "#4B9CF5",
+        page: pageId,
+        lastActive: Date.now(),
+        isIdle: false,
       }}
       initialStorage={{
         nodes: new LiveMap(initialNodes!.map((n) => [n.id, n])),
       }}
     >
-      <Editor projectId={projectId} role={role!} canEdit={role !== "viewer"} />
+      <Editor projectId={projectId} pageId={pageId} role={role!} canEdit={role !== "viewer"} />
     </RoomProvider>
   );
 }
@@ -150,12 +159,18 @@ function NoAccessScreen({
 
 interface EditorProps {
   projectId: string;
+  pageId: string;
   role: Role;
   canEdit: boolean;
 }
 
-function Editor({ projectId, role, canEdit }: EditorProps) {
+function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
   const router = useRouter();
+  const { user } = useUser();
+
+  const userName = user?.fullName || user?.emailAddresses?.[0]?.emailAddress || "Anonymous";
+  const userAvatar = user?.imageUrl || "";
+  const userColor = getUserColor(user?.id || projectId);
 
   const nodes =
     useStorage((root) =>
@@ -271,7 +286,7 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
       deleteShape(ids);
       ids.forEach((id) => deleteNode(id));
       setSelectedIds([]);
-      updateMyPresence({ selectedId: null });
+      updateMyPresence({ selectedId: null, selectedName: null });
     },
     [deleteShape, deleteNode, updateMyPresence, canEdit],
   );
@@ -385,9 +400,12 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   const handleSelectAndBroadcast = useCallback(
     (id: string | null, metaKey?: boolean, shiftKey?: boolean) => {
       handleSelect(id, metaKey, shiftKey);
-      updateMyPresence({ selectedId: id });
+      const selectedName = id
+        ? nodes.find((n) => n.id === id)?.name ?? null
+        : null;
+      updateMyPresence({ selectedId: id, selectedName });
     },
-    [handleSelect, updateMyPresence],
+    [handleSelect, updateMyPresence, nodes],
   );
 
   const handleMouseMoveForCursor = useCallback(
@@ -446,13 +464,43 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
   useEffect(() => {
     const update = () =>
       setCanvasSize({
-        width: Math.max(400, window.innerWidth - 520),
+        width: Math.max(400, window.innerWidth - 700),
         height: Math.max(300, window.innerHeight - 60),
       });
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+
+  useIdleDetection(
+    useCallback(
+      (isIdle: boolean) => {
+        updateMyPresence({
+          isIdle,
+          lastActive: Date.now(),
+        });
+      },
+      [updateMyPresence],
+    ),
+    useCallback(() => {
+      updateMyPresence({
+        lastActive: Date.now(),
+      });
+    }, [updateMyPresence]),
+  );
+
+  useEffect(() => {
+    updateMyPresence({
+      userName,
+      userAvatar,
+      userColor,
+      page: pageId,
+      lastActive: Date.now(),
+      isIdle: false,
+      selectedId: null,
+      selectedName: null,
+    });
+  }, [updateMyPresence, userName, userAvatar, userColor, pageId]);
 
   useEffect(() => {
     if (
@@ -498,6 +546,12 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
         onBack={() => router.back()}
         selectedIds={selectedIds}
         canEdit={canEdit}
+        others={others as any[]}
+        currentUser={{
+          name: userName,
+          avatar: userAvatar,
+          color: userColor,
+        }}
         alignment={{
           alignLeft,
           alignCenterX,
@@ -508,6 +562,7 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
           distributeHorizontally,
           distributeVertically,
         }}
+        projectId={projectId}
       />
 
       <LeftSidebar
@@ -518,6 +573,16 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
         smartGuides={smartGuides}
         setSmartGuides={setSmartGuides}
         error={error}
+      />
+
+      <LayersPanel
+        nodes={nodes}
+        selectedIds={selectedIds}
+        setSelectedIds={setSelectedIds}
+        updateNodeProperty={updatePropertyAndSync}
+        setNodes={syncSetNodes}
+        saveToHistory={saveToHistory}
+        canEdit={canEdit}
       />
 
       <div style={{ position: "relative" }}>
@@ -548,10 +613,16 @@ function Editor({ projectId, role, canEdit }: EditorProps) {
           onMouseLeave={handleMouseLeaveForCursor}
           guides={guides}
           selectionRect={selectionRect}
+          collaboratorSelections={(others as any[])?.map((o: any) => ({
+            connectionId: o.connectionId,
+            color: o.presence.userColor || "#4B9CF5",
+            selectedId: o.presence.selectedId || null,
+          }))}
         />
 
         <CollaboratorCursors
-          others={others}
+          others={others as any}
+          nodes={nodes}
           stageScale={stageScale}
           stagePosition={stagePosition}
         />

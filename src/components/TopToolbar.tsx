@@ -19,6 +19,8 @@ import {
   Columns3,
   Rows3,
 } from "lucide-react";
+import CollaboratorAvatars from "./CollaboratorAvatars";
+import NotificationBell from "./NotificationBell";
 
 type Role = "owner" | "editor" | "viewer";
 
@@ -57,6 +59,25 @@ interface TopToolbarProps {
   selectedIds: string[];
   canEdit: boolean;
   alignment: AlignmentHandlers;
+  projectId?: string;
+  others?: Array<{
+    connectionId: number;
+    presence: {
+      userName: string;
+      userAvatar: string;
+      userColor: string;
+      page: string;
+      lastActive: number;
+      isIdle: boolean;
+      selectedId: string | null;
+      selectedName: string | null;
+    };
+  }>;
+  currentUser?: {
+    name: string;
+    avatar: string;
+    color: string;
+  };
 }
 
 export default function TopToolbar({
@@ -77,6 +98,9 @@ export default function TopToolbar({
   selectedIds,
   canEdit,
   alignment,
+  projectId,
+  others,
+  currentUser,
 }: TopToolbarProps) {
   const isLive = saveIndicator === "Live";
 
@@ -247,6 +271,14 @@ export default function TopToolbar({
             Reset
           </button>
         </div>
+
+        <div className="w-px h-5 bg-gray-200" />
+
+        <NotificationBell projectId={projectId} />
+
+        <div className="w-px h-5 bg-gray-200" />
+
+        <CollaboratorAvatars others={others ?? []} currentUser={currentUser} />
 
         <div className="w-px h-5 bg-gray-200" />
 

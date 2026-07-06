@@ -17,6 +17,10 @@ export interface Node {
   zIndex: number;
   strokeStyle?: "solid" | "dashed";
   imageUrl?: string;
-  points?: number[]; // For line shapes
+  points?: number[];
+  visible?: boolean;
+  locked?: boolean;
+  name?: string;
+  parentId?: string | null;
   [key: string]: any;
 }

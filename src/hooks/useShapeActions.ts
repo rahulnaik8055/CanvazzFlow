@@ -54,6 +54,10 @@ export const useShapeActions = (
             fontSize: 16,
             fontFamily: "Inter, system-ui, sans-serif",
             zIndex: maxZIndex + 1,
+            visible: true,
+            locked: false,
+            name: "Frame",
+            parentId: null,
           };
         } else if (type === "image" && file) {
           const imageUrl = URL.createObjectURL(file);
@@ -81,8 +85,19 @@ export const useShapeActions = (
             fontFamily: "Inter, system-ui, sans-serif",
             zIndex: maxZIndex + 1,
             imageUrl,
+            visible: true,
+            locked: false,
+            name: "Image",
+            parentId: null,
           };
         } else {
+          const typeLabel =
+            type === "rect" ? "Rectangle" :
+            type === "circle" ? "Ellipse" :
+            type === "text" ? "Text" :
+            type === "star" ? "Star" :
+            type === "diamond" ? "Diamond" : "Shape";
+
           newNode = {
             id: generateId(),
             type,
@@ -110,6 +125,10 @@ export const useShapeActions = (
             fontSize: 16,
             fontFamily: "Inter, system-ui, sans-serif",
             zIndex: maxZIndex + 1,
+            visible: true,
+            locked: false,
+            name: typeLabel,
+            parentId: null,
           };
         }
 
@@ -152,6 +171,7 @@ export const useShapeActions = (
         newNodes.push({
           ...node,
           id: newId,
+          name: node.name ? `${node.name} copy` : undefined,
           x: node.x + 20,
           y: node.y + 20,
           zIndex: maxZIndex + 1 + newIds.length,

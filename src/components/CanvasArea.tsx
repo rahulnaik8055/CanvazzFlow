@@ -33,6 +33,12 @@ import { GRID_SIZE, MIN_SIZE } from "@/constants/CanvasConstants";
 import { SnapGuide } from "@/hooks/useSnapping";
 import { SelectionRect } from "@/hooks/useCanvasInteractions";
 
+interface CollaboratorSelection {
+  connectionId: number;
+  color: string;
+  selectedId: string | null;
+}
+
 interface CanvasAreaProps {
   addShape: (
     type: "rect" | "circle" | "text" | "frame" | "image" | "star" | "diamond",
@@ -63,6 +69,7 @@ interface CanvasAreaProps {
   onMouseLeave: () => void;
   guides: SnapGuide[];
   selectionRect: SelectionRect | null;
+  collaboratorSelections?: CollaboratorSelection[];
 }
 
 const ImageNode = ({ node, commonProps }: { node: Node; commonProps: any }) => {
@@ -144,7 +151,9 @@ export default function CanvasArea(props: CanvasAreaProps) {
   }, [props.showGrid, props.canvasSize, props.stageScale, props.stagePosition]);
 
   const sortedNodes = useMemo(() => {
-    return [...props.nodes].sort((a, b) => a.zIndex - b.zIndex);
+    return [...props.nodes]
+      .filter((n) => n.visible !== false)
+      .sort((a, b) => a.zIndex - b.zIndex);
   }, [props.nodes]);
 
   const guideLines = useMemo(() => {
@@ -221,7 +230,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
               rotation: node.rotation,
               opacity: node.opacity,
               zIndex: node.zIndex,
-              draggable: props.tool === "select",
+              draggable: props.tool === "select" && !node.locked,
               onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
                 props.handleSelect(node.id, e.evt.metaKey, e.evt.shiftKey),
               onTap: () => props.handleSelect(node.id),
@@ -343,10 +352,33 @@ export default function CanvasArea(props: CanvasAreaProps) {
         </Layer>
 
         <Layer zIndex={2} listening={false}>
-          {guideLines}
+          {props.collaboratorSelections?.map((cs) => {
+            if (!cs.selectedId) return null;
+            const node = props.nodes.find((n) => n.id === cs.selectedId);
+            if (!node) return null;
+            const w = node.type === "circle" ? node.radius * 2 : node.width;
+            const h = node.type === "circle" ? node.radius * 2 : node.height;
+            return (
+              <Rect
+                key={`sel-${cs.connectionId}`}
+                x={node.x - 2}
+                y={node.y - 2}
+                width={w + 4}
+                height={h + 4}
+                stroke={cs.color}
+                strokeWidth={2 / props.stageScale}
+                dash={[4 / props.stageScale, 2 / props.stageScale]}
+                listening={false}
+              />
+            );
+          })}
         </Layer>
 
         <Layer zIndex={3} listening={false}>
+          {guideLines}
+        </Layer>
+
+        <Layer zIndex={4} listening={false}>
           {selectionRectNode}
         </Layer>
       </Stage>

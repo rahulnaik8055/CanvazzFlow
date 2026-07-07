@@ -18,6 +18,7 @@ import { SkeletonGrid } from "@/components/custom/SkeletonGrid";
 import { EmptyState } from "@/components/custom/EmptyState";
 import { ProjectCard, IProject } from "@/components/project/ProjectCard";
 import { ProjectModal } from "@/components/project/ProjectModal";
+import { InviteDialog } from "@/components/invitations/InviteDialog";
 import { useDebounce } from "@/hooks/useDebounce";
 
 const LIMIT = 12;
@@ -51,6 +52,7 @@ export default function ProjectsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<IProject | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [inviteProjectId, setInviteProjectId] = useState<string | null>(null);
   const debouncedSearch = useDebounce(search, 300);
 
   const fetchProjects = useCallback(async () => {
@@ -149,6 +151,10 @@ export default function ProjectsPage() {
     router.push(`/project/${project.id}/settings`);
   }, [router]);
 
+  const handleInvite = useCallback((project: IProject) => {
+    setInviteProjectId(project.id);
+  }, []);
+
   const handleDuplicate = useCallback(async (project: IProject) => {
     try {
       await apiRef.current.post("project", {
@@ -236,6 +242,7 @@ export default function ProjectsPage() {
                 onToggleArchive={handleToggleArchive}
                 onTogglePin={handleTogglePin}
                 onSettings={handleSettings}
+                onInvite={handleInvite}
               />
             ))}
           </div>
@@ -298,6 +305,12 @@ export default function ProjectsPage() {
           )}
         </>
       )}
+
+      <InviteDialog
+        open={inviteProjectId !== null}
+        onOpenChange={(open) => { if (!open) setInviteProjectId(null); }}
+        projectId={inviteProjectId ?? ""}
+      />
 
       <ProjectModal
         open={modalOpen}

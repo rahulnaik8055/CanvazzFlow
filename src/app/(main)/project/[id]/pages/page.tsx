@@ -20,6 +20,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { InviteDialog } from "@/components/invitations/InviteDialog";
 import { SkeletonGrid } from "@/components/custom/SkeletonGrid";
 import { EmptyState } from "@/components/custom/EmptyState";
 
@@ -75,6 +76,7 @@ export default function PagesPage() {
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   const debouncedSearch = useDebounce(search);
 
@@ -237,7 +239,14 @@ export default function PagesPage() {
         onRefresh={() => fetchPages(true)}
       />
 
-      <div className="flex items-center justify-end mb-4">
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <button
+          onClick={() => setInviteOpen(true)}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <Users className="w-3.5 h-3.5" />
+          Invite
+        </button>
         <button
           onClick={() => router.push(`/project/${projectId}/settings`)}
           className="flex items-center gap-2 px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -350,6 +359,8 @@ export default function PagesPage() {
           </PaginationContent>
         </Pagination>
       )}
+
+      <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} projectId={projectId} />
     </div>
   );
 }

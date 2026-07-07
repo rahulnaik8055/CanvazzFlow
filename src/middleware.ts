@@ -1,8 +1,17 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const isPublicRoute = createRouteMatcher(["/"]);
-const isProtectedRoute = createRouteMatcher(["/project(.*)", "/sync"]);
+const isPublicRoute = createRouteMatcher(["/", "/invitations/[token]"]);
+const isProtectedRoute = createRouteMatcher([
+  "/dashboard(.*)",
+  "/project(.*)",
+  "/editor(.*)",
+  "/sync",
+  "/invitations(.*)",
+  "/profile(.*)",
+  "/settings(.*)",
+  "/requests(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
@@ -11,7 +20,7 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (isPublicRoute(req) && userId) {
+  if (isPublicRoute(req) && userId && req.nextUrl.pathname === "/") {
     return NextResponse.redirect(new URL("/sync", req.url));
   }
 });

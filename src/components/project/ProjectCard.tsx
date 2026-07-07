@@ -18,6 +18,7 @@ import {
   Archive,
   Pin,
   Settings as SettingsIcon,
+  UserPlus,
 } from "lucide-react";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ContextMenu } from "@/components/ui/context-menu";
@@ -64,6 +65,7 @@ interface ProjectCardProps {
   onToggleArchive?: (project: IProject) => void;
   onTogglePin?: (project: IProject) => void;
   onSettings?: (project: IProject) => void;
+  onInvite?: (project: IProject) => void;
 }
 
 function timeAgo(date: string) {
@@ -131,6 +133,7 @@ export function ProjectCard({
   onToggleArchive,
   onTogglePin,
   onSettings,
+  onInvite,
 }: ProjectCardProps) {
   const [favorite, setFavorite] = useState(project.isFavorited ?? false);
 
@@ -282,15 +285,13 @@ export function ProjectCard({
               </span>
             </div>
 
-            {isOwner && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onSettings?.(project); }}
-                className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <SettingsIcon size={12} />
-                Settings
-              </button>
-            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onInvite?.(project); }}
+              className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <UserPlus size={12} />
+              Invite
+            </button>
           </div>
         </div>
       </div>

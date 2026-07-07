@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useApi } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -12,41 +12,33 @@ export interface SearchProject {
   visibility: "public" | "private";
   ownerId: string;
   createdAt: string;
+  updatedAt: string;
+  owner: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    imageUrl: string | null;
+  };
+  memberCount: number;
+  myRole: string | null;
 }
 
-export interface SearchPage {
+export interface SearchUser {
   id: string;
-  name: string;
-  projectId: string;
-  project: { id: string; name: string };
-}
-
-export interface SearchMember {
-  id: string;
-  role: string;
-  userId: string;
-  projectId: string;
-  user: { id: string; firstName: string | null; lastName: string | null; email: string; imageUrl: string | null };
-  project: { id: string; name: string };
-}
-
-export interface SearchRequest {
-  id: string;
-  status: string;
-  message: string | null;
-  createdAt: string;
-  user: { id: string; firstName: string | null; lastName: string | null; email: string; imageUrl: string | null };
-  project: { id: string; name: string };
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  imageUrl: string | null;
+  mutualProjectsCount: number;
+  isCollaborator: boolean;
 }
 
 export interface SearchResults {
   projects: SearchProject[];
-  pages: SearchPage[];
-  members: SearchMember[];
-  requests: SearchRequest[];
+  users: SearchUser[];
 }
 
-const RECENT_KEY = "global-search-recent";
+const RECENT_KEY = "universal-search-recent";
 
 function getRecent(): string[] {
   if (typeof window === "undefined") return [];
@@ -66,10 +58,10 @@ function saveRecent(q: string) {
   } catch {}
 }
 
-export function useGlobalSearch() {
+export function useUniversalSearch() {
   const apiRef = useRef(useApi());
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResults>({ projects: [], pages: [], members: [], requests: [] });
+  const [results, setResults] = useState<SearchResults>({ projects: [], users: [] });
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
@@ -81,7 +73,7 @@ export function useGlobalSearch() {
 
   useEffect(() => {
     if (!debouncedQuery.trim()) {
-      setResults({ projects: [], pages: [], members: [], requests: [] });
+      setResults({ projects: [], users: [] });
       setSearched(false);
       setLoading(false);
       return;
@@ -98,7 +90,7 @@ export function useGlobalSearch() {
         }
       } catch {
         if (!cancelled) {
-          setResults({ projects: [], pages: [], members: [], requests: [] });
+          setResults({ projects: [], users: [] });
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -117,7 +109,7 @@ export function useGlobalSearch() {
     setRecent([]);
   }, []);
 
-  const open = query.length > 0 || recent.length > 0;
+  const totalCount = results.projects.length + results.users.length;
 
   return {
     query,
@@ -128,12 +120,20 @@ export function useGlobalSearch() {
     recent,
     submitSearch,
     clearRecent,
-    totalCount: results.projects.length + results.pages.length + results.members.length + results.requests.length,
-    open,
+    totalCount,
   };
 }
 
-export function highlightText(text: string, query: string): { before: string; match: string; after: string } | null {
+export function highlightText(text: string, query: string): string | null {
+  if (!query.trim() || !text) return null;
+  const lower = text.toLowerCase();
+  const qLower = query.toLowerCase();
+  const idx = lower.indexOf(qLower);
+  if (idx === -1) return null;
+  return text.slice(idx, idx + qLower.length);
+}
+
+export function highlightParts(text: string, query: string): { before: string; match: string; after: string } | null {
   if (!query.trim() || !text) return null;
   const lower = text.toLowerCase();
   const qLower = query.toLowerCase();

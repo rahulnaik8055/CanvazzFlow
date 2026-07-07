@@ -34,6 +34,7 @@ export const useCanvasInteractions = (
   setLastPointerPosition: (pos: { x: number; y: number }) => void,
   tool: "select" | "pan",
   selectedIds: string[],
+  canEdit: boolean,
 ) => {
   const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
   const isSelectingRef = useRef(false);
@@ -58,7 +59,7 @@ export const useCanvasInteractions = (
   const handleSelect = useCallback(
     (id: string | null, metaKey?: boolean, shiftKey?: boolean) => {
       const mod = metaKey || shiftKey;
-      if (id) {
+      if (id && canEdit) {
         const maxZIndex =
           nodes.length > 0 ? Math.max(...nodes.map((n) => n.zIndex)) : 0;
         const newNodes = nodes.map((node) =>
@@ -77,7 +78,7 @@ export const useCanvasInteractions = (
       }
       if (id) setError(null);
     },
-    [nodes, setNodes, saveToHistory, setSelectedIds, setError],
+    [nodes, setNodes, saveToHistory, setSelectedIds, setError, canEdit],
   );
 
   const handleDrag = useCallback(
@@ -176,32 +177,38 @@ export const useCanvasInteractions = (
     (e: Konva.KonvaEventObject<WheelEvent>) => {
       e.evt.preventDefault();
       try {
-        const oldScale = stageScale;
-        const pointer = stageRef.current?.getPointerPosition() ?? {
-          x: 0,
-          y: 0,
-        };
+        const isZoom = e.evt.ctrlKey || e.evt.metaKey;
 
-        const mousePointTo = {
-          x: (pointer.x - stagePosition.x) / oldScale,
-          y: (pointer.y - stagePosition.y) / oldScale,
-        };
+        if (isZoom) {
+          const oldScale = stageScale;
+          const pointer = stageRef.current?.getPointerPosition() ?? { x: 0, y: 0 };
 
-        const newScale = Math.max(
-          MIN_SCALE,
-          Math.min(
-            MAX_SCALE,
-            e.evt.deltaY > 0
-              ? oldScale / SCALE_FACTOR
-              : oldScale * SCALE_FACTOR,
-          ),
-        );
+          const mousePointTo = {
+            x: (pointer.x - stagePosition.x) / oldScale,
+            y: (pointer.y - stagePosition.y) / oldScale,
+          };
 
-        setStageScale(newScale);
-        setStagePosition({
-          x: pointer.x - mousePointTo.x * newScale,
-          y: pointer.y - mousePointTo.y * newScale,
-        });
+          const newScale = Math.max(
+            MIN_SCALE,
+            Math.min(
+              MAX_SCALE,
+              e.evt.deltaY > 0
+                ? oldScale / SCALE_FACTOR
+                : oldScale * SCALE_FACTOR,
+            ),
+          );
+
+          setStageScale(newScale);
+          setStagePosition({
+            x: pointer.x - mousePointTo.x * newScale,
+            y: pointer.y - mousePointTo.y * newScale,
+          });
+        } else {
+          setStagePosition((prev) => ({
+            x: prev.x - e.evt.deltaX / stageScale,
+            y: prev.y - e.evt.deltaY / stageScale,
+          }));
+        }
       } catch (err) {
         setError("Zoom failed. Please try again.");
         console.error("Error handling wheel:", err);

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Move,
   MousePointer,
@@ -18,6 +18,9 @@ import {
   AlignEndHorizontal,
   Columns3,
   Rows3,
+  Users,
+  ChevronDown,
+  X,
 } from "lucide-react";
 import CollaboratorAvatars from "./CollaboratorAvatars";
 import NotificationBell from "./NotificationBell";
@@ -39,6 +42,15 @@ interface AlignmentHandlers {
   alignBottom: (ids: string[]) => void;
   distributeHorizontally: (ids: string[]) => void;
   distributeVertically: (ids: string[]) => void;
+}
+
+interface MemberUser {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  imageUrl: string | null;
+  role: string;
 }
 
 interface TopToolbarProps {
@@ -78,6 +90,9 @@ interface TopToolbarProps {
     avatar: string;
     color: string;
   };
+  members?: MemberUser[];
+  onRoleChange?: (userId: string, role: string) => void;
+  onRemoveMember?: (userId: string) => void;
 }
 
 export default function TopToolbar({
@@ -101,6 +116,9 @@ export default function TopToolbar({
   projectId,
   others,
   currentUser,
+  members,
+  onRoleChange,
+  onRemoveMember,
 }: TopToolbarProps) {
   const isLive = saveIndicator === "Live";
 
@@ -110,6 +128,19 @@ export default function TopToolbar({
       : saveIndicator === "Reconnecting"
         ? "Reconnecting..."
         : "Connecting...";
+
+  const [membersOpen, setMembersOpen] = useState(false);
+  const membersRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (membersRef.current && !membersRef.current.contains(e.target as Node)) {
+        setMembersOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   return (
     <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm px-3 z-20 flex items-center justify-between h-14">
@@ -272,6 +303,72 @@ export default function TopToolbar({
           </button>
         </div>
 
+        {/* Members dropdown (owner only) */}
+        {role === "owner" && members && members.length > 0 && (
+          <>
+            <div className="w-px h-5 bg-gray-200" />
+            <div className="relative" ref={membersRef}>
+              <button
+                onClick={() => setMembersOpen(!membersOpen)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  membersOpen ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                <Users size={14} />
+                Members
+                <ChevronDown size={12} />
+              </button>
+              {membersOpen && (
+                <div className="absolute top-full mt-1 right-0 w-72 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden z-30">
+                  <div className="max-h-80 overflow-y-auto py-1">
+                    {members.map((m, idx) => {
+                      const initials = [m.firstName, m.lastName].filter(Boolean).map((s) => (s as string)[0]).join("").toUpperCase().slice(0, 2);
+                      const name = [m.firstName, m.lastName].filter(Boolean).join(" ") || m.email;
+                      const isOwner = m.role === "owner";
+                      return (
+                        <div key={`${m.id}-${idx}`} className="flex items-center gap-3 px-3 py-2.5">
+                          <div className="w-7 h-7 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center shrink-0">
+                            {m.imageUrl ? (
+                              <img src={m.imageUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[9px] font-semibold text-gray-500">{initials}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-medium text-gray-900 truncate">{name}</div>
+                            <div className="text-[10px] text-gray-400 truncate">{m.email}</div>
+                          </div>
+                          {isOwner ? (
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 capitalize shrink-0">Owner</span>
+                          ) : (
+                            <>
+                              <select
+                                value={m.role}
+                                onChange={(e) => onRoleChange?.(m.id, e.target.value)}
+                                className="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-400 capitalize shrink-0"
+                              >
+                                <option value="viewer">Viewer</option>
+                                <option value="editor">Editor</option>
+                              </select>
+                              <button
+                                onClick={() => onRemoveMember?.(m.id)}
+                                className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+                                title="Remove member"
+                              >
+                                <X size={12} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
         <div className="w-px h-5 bg-gray-200" />
 
         <NotificationBell projectId={projectId} />
@@ -303,3 +400,5 @@ export default function TopToolbar({
     </div>
   );
 }
+
+

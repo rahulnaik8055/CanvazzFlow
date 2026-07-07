@@ -1,6 +1,5 @@
 "use client";
 
-import { useAccessRequests } from "@/hooks/useAccessRequests";
 import { UserButton } from "@clerk/nextjs";
 import {
   ChevronLeft,
@@ -10,16 +9,25 @@ import {
   LayoutDashboard,
   Search,
   Command,
+  Send,
+  User,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { GlobalSearch } from "@/components/search/GlobalSearch";
+import { UniversalSearch } from "@/components/search/UniversalSearch";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Projects", href: "/project", icon: FolderOpen },
   { label: "Requests", href: "/requests", icon: Bell },
+  { label: "Invitations", href: "/invitations", icon: Send },
+];
+
+const BOTTOM_ITEMS = [
+  { label: "Profile", href: "/profile", icon: User },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 function Sidebar({
@@ -106,6 +114,28 @@ function Sidebar({
           })}
         </nav>
 
+        {/* Bottom nav items */}
+        <div className="py-2 px-2 flex flex-col gap-1 border-t border-gray-100 mt-auto">
+          {BOTTOM_ITEMS.map(({ label, href, icon: Icon }) => {
+            const isActive = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={collapsed ? label : undefined}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? "bg-blue-50 text-blue-600 font-medium"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                } ${collapsed ? "justify-center" : ""}`}
+              >
+                <Icon size={18} className="shrink-0" />
+                {!collapsed && <span>{label}</span>}
+              </Link>
+            );
+          })}
+        </div>
+
         <button
           onClick={onToggle}
           className="absolute -right-3 top-20 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors z-10"
@@ -118,7 +148,7 @@ function Sidebar({
         </button>
       </aside>
 
-      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <UniversalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

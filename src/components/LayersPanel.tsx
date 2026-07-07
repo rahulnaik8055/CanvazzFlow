@@ -28,6 +28,7 @@ interface LayersPanelProps {
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void;
   saveToHistory: (nodes: Node[]) => void;
   canEdit: boolean;
+  embedded?: boolean;
 }
 
 function getMaxChildZIndex(list: Node[], parentId: string) {
@@ -54,6 +55,7 @@ export default function LayersPanel({
   setNodes,
   saveToHistory,
   canEdit,
+  embedded,
 }: LayersPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -429,11 +431,8 @@ export default function LayersPanel({
 
   const topLevelNodes = childrenMap.get(null) ?? [];
 
-  return (
-    <div
-      className="flex flex-col h-full bg-white border-r border-gray-100 shadow-[2px_0_12px_rgba(0,0,0,0.04)] mt-14"
-      style={{ width: 260 }}
-    >
+  const content = (
+    <>
       <div className="shrink-0 px-3 py-3 border-b border-gray-100">
         <div className="flex items-center gap-2 mb-2.5">
           <Layers size={13} className="text-gray-400" />
@@ -481,13 +480,26 @@ export default function LayersPanel({
         ) : searchQuery && topLevelNodes.every((n) => !isVisible(n.id)) ? (
           <div className="px-4 py-8 text-center">
             <p className="text-[12px] text-gray-300">
-              No layers match "{searchQuery}"
+              No layers match &quot;{searchQuery}&quot;
             </p>
           </div>
         ) : (
           topLevelNodes.map((node) => renderNode(node, 0))
         )}
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <div
+      className="flex flex-col h-full bg-white border-r border-gray-100 shadow-[2px_0_12px_rgba(0,0,0,0.04)] mt-14"
+      style={{ width: 260 }}
+    >
+      {content}
     </div>
   );
 }

@@ -29,7 +29,6 @@ import { useSnapping } from "@/hooks/useSnapping";
 import { useAlignment } from "@/hooks/useAlignment";
 import InspectorPanel from "@/components/InspectorPanel";
 import CanvasArea from "@/components/CanvasArea";
-import LayersPanel from "@/components/LayersPanel";
 import LeftSidebar from "@/components/LeftSidebar";
 import TopToolbar from "@/components/TopToolbar";
 import CollaboratorCursors from "@/components/editor/CollaboratorCursors";
@@ -174,6 +173,37 @@ interface EditorProps {
 function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
   const router = useRouter();
   const { user } = useUser();
+  const api = useApi();
+
+  const [members, setMembers] = useState<Array<{ id: string; firstName: string | null; lastName: string | null; email: string; imageUrl: string | null; role: string }>>([]);
+
+  useEffect(() => {
+    if (role !== "owner") return;
+    api.get(`projects/${projectId}/members`).then((data: any[]) => {
+      const unique = Array.from(new Map(data.map((m: any) => [m.id, m])).values());
+      setMembers(unique);
+    }).catch(() => {});
+  }, [projectId, role]);
+
+  const handleRoleChange = useCallback(async (userId: string, newRole: string) => {
+    try {
+      await api.patch(`projects/${projectId}/members/${userId}/role`, { role: newRole });
+      setMembers((prev) => prev.map((m) => (m.id === userId ? { ...m, role: newRole } : m)));
+      toast.success("Role updated");
+    } catch {
+      toast.error("Failed to update role");
+    }
+  }, [projectId]);
+
+  const handleRemoveMember = useCallback(async (userId: string) => {
+    try {
+      await api.delete(`projects/${projectId}/members/${userId}`);
+      setMembers((prev) => prev.filter((m) => m.id !== userId));
+      toast.success("Member removed");
+    } catch {
+      toast.error("Failed to remove member");
+    }
+  }, [projectId]);
 
   const userName = user?.fullName || user?.emailAddresses?.[0]?.emailAddress || "Anonymous";
   const userAvatar = user?.imageUrl || "";
@@ -186,6 +216,8 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [tool, setTool] = useState<"select" | "pan">("select");
+  const [spaceHeld, setSpaceHeld] = useState(false);
+  const effectiveTool: "select" | "pan" = spaceHeld ? "pan" : tool;
   const [stageScale, setStageScale] = useState(1);
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const [isDraggingStage, setIsDraggingStage] = useState(false);
@@ -212,6 +244,13 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
 
   const [, updateMyPresence] = useMyPresence();
   const others = useOthers();
+
+  // Broadcast deselection to collaborators whenever selectedIds becomes empty
+  useEffect(() => {
+    if (selectedIds.length === 0) {
+      updateMyPresence({ selectedId: null, selectedName: null });
+    }
+  }, [selectedIds, updateMyPresence]);
 
   const _upsertNode = useMutation(({ storage }, node: Node) => {
     storage.get("nodes").set(node.id, node);
@@ -361,8 +400,9 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
     setIsDraggingStage,
     lastPointerPosition,
     setLastPointerPosition,
-    tool,
+    effectiveTool,
     selectedIds,
+    canEdit,
   );
 
   const handleDragStart = useCallback(
@@ -427,6 +467,28 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
   const handleMouseLeaveForCursor = useCallback(() => {
     updateMyPresence({ cursor: null });
   }, [updateMyPresence]);
+
+  // Space-hold for temporary pan (Figma-like)
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !e.repeat) {
+        e.preventDefault();
+        setSpaceHeld(true);
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        setSpaceHeld(false);
+      }
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, []);
 
   useEffect(() => {
     if (!canEdit) return;
@@ -511,7 +573,7 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
 
   useEffect(() => {
     if (
-      tool === "select" &&
+      effectiveTool === "select" &&
       selectedIds.length > 0 &&
       transformerRef.current &&
       stageRef.current
@@ -528,7 +590,7 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
       transformerRef.current.nodes([]);
       transformerRef.current.getLayer()?.batchDraw();
     }
-  }, [selectedIds, nodes, tool]);
+  }, [selectedIds, nodes, effectiveTool]);
 
   const selectedNode = selectedIds.length === 1
     ? nodes.find((n) => n.id === selectedIds[0]) || null
@@ -570,6 +632,9 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
           distributeVertically,
         }}
         projectId={projectId}
+        members={members.length > 0 ? members : undefined}
+        onRoleChange={handleRoleChange}
+        onRemoveMember={handleRemoveMember}
       />
 
       <LeftSidebar
@@ -580,9 +645,6 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
         smartGuides={smartGuides}
         setSmartGuides={setSmartGuides}
         error={error}
-      />
-
-      <LayersPanel
         nodes={nodes}
         selectedIds={selectedIds}
         setSelectedIds={setSelectedIds}
@@ -592,7 +654,7 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
         canEdit={canEdit}
       />
 
-      <div style={{ position: "relative" }}>
+      <div className="flex-1" style={{ position: "relative" }}>
         <CanvasArea
           addShape={addShapeAndSync}
           nodes={nodes}
@@ -601,7 +663,7 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
           stagePosition={stagePosition}
           showGrid={showGrid}
           selectedIds={selectedIds}
-          tool={tool}
+          tool={effectiveTool}
           zoomIn={zoomIn}
           zoomOut={zoomOut}
           resetView={resetView}
@@ -609,10 +671,11 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
           transformerRef={transformerRef}
           handleSelect={handleSelectAndBroadcast}
           handleDrag={canEdit ? handleDragAndSync : () => {}}
-          handleDragStart={handleDragStart}
+          handleDragStart={canEdit ? handleDragStart : () => {}}
           handleDragMove={canEdit ? handleDragMove : () => {}}
           handleTransform={canEdit ? handleTransform : () => {}}
           handleTransformEnd={canEdit ? handleTransformEndAndSync : () => {}}
+          canEdit={canEdit}
           handleWheel={handleWheel}
           handleStageMouseDown={handleStageMouseDown}
           handleStageMouseMove={handleMouseMoveForCursor}

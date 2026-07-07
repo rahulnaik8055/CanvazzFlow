@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { Loader2, Inbox, Search as SearchIcon, AlertCircle, CheckSquare, Square } from "lucide-react";
+import { Loader2, AlertCircle, CheckSquare, Square } from "lucide-react";
+import { EmptyState } from "@/components/custom/EmptyState";
 import { useAccessRequestsManagement, AccessRequestItem } from "@/hooks/useAccessRequestsManagement";
 import { useDebounce } from "@/hooks/useDebounce";
 import { RequestCard } from "@/components/requests/RequestCard";
@@ -183,23 +184,15 @@ export default function RequestsPage() {
               <Loader2 size={18} className="animate-spin text-gray-300" />
             </div>
           ) : items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
-                {searchInput ? (
-                  <SearchIcon size={20} className="text-gray-300" />
-                ) : (
-                  <Inbox size={20} className="text-gray-300" />
-                )}
-              </div>
-              <p className="text-sm font-medium text-gray-500">
-                {searchInput ? "No matching requests" : "No requests yet"}
-              </p>
-              <p className="text-xs text-gray-400 mt-1 max-w-xs">
-                {searchInput
-                  ? "Try a different search term or filter."
-                  : "When someone requests access to your project, it will appear here."}
-              </p>
-            </div>
+            <EmptyState
+              illustration="requests"
+              title={searchInput ? `No results for "${searchInput}"` : "No requests yet"}
+              description={
+                searchInput
+                  ? "Try a different search term or change your filters."
+                  : "When someone requests access to one of your projects, their request will appear here so you can review and respond."
+              }
+            />
           ) : (
             <div className="flex flex-col gap-3">
               {items.map((item) => (

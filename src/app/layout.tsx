@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import { Providers } from "./Providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,8 +31,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen`}
       >
         <ClerkProvider>
-          {children}
-          <Toaster richColors />
+          <Providers>
+            {children}
+            <Toaster richColors />
+          </Providers>
         </ClerkProvider>
       </body>
     </html>

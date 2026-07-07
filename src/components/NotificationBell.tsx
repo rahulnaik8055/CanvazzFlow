@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
 import { formatLastActive } from "@/lib/presence";
+import { EmptyState } from "@/components/custom/EmptyState";
 
 function NotificationItem({
   n,
@@ -101,8 +102,12 @@ export default function NotificationBell({ projectId }: NotificationBellProps) {
 
           <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-400">
-                No notifications yet
+              <div className="px-2 py-6">
+                <EmptyState
+                  illustration="notifications"
+                  title="No notifications yet"
+                  description="When there's activity on your projects, notifications will show up here."
+                />
               </div>
             ) : (
               notifications.map((n) => (

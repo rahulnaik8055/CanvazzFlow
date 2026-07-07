@@ -1,48 +1,42 @@
-import axios from "axios";
 import { useAuth } from "@clerk/nextjs";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+import httpClient from "./http-client";
 
 export function useApi() {
   const { getToken } = useAuth();
 
-  const getHeaders = async () => {
+  const authHeaders = async () => {
     const token = await getToken();
-    return {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    };
+    return { Authorization: `Bearer ${token}` };
   };
 
   const api = {
     get: async (url: string) => {
-      const headers = await getHeaders();
-      const res = await axios.get(`${BASE_URL}/${url}`, { headers });
-      console.log(process.env.NEXT_PUBLIC_API_URL)
+      const headers = await authHeaders();
+      const res = await httpClient.get(url, { headers });
       return res.data;
     },
 
     post: async (url: string, data?: any) => {
-      const headers = await getHeaders();
-      const res = await axios.post(`${BASE_URL}/${url}`, data, { headers });
+      const headers = await authHeaders();
+      const res = await httpClient.post(url, data, { headers });
       return res.data;
     },
 
     put: async (url: string, data?: any) => {
-      const headers = await getHeaders();
-      const res = await axios.put(`${BASE_URL}/${url}`, data, { headers });
+      const headers = await authHeaders();
+      const res = await httpClient.put(url, data, { headers });
       return res.data;
     },
 
     patch: async (url: string, data?: any) => {
-      const headers = await getHeaders();
-      const res = await axios.patch(`${BASE_URL}/${url}`, data, { headers });
+      const headers = await authHeaders();
+      const res = await httpClient.patch(url, data, { headers });
       return res.data;
     },
 
     delete: async (url: string) => {
-      const headers = await getHeaders();
-      const res = await axios.delete(`${BASE_URL}/${url}`, { headers });
+      const headers = await authHeaders();
+      const res = await httpClient.delete(url, { headers });
       return res.data;
     },
   };

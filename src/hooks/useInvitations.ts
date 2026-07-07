@@ -18,6 +18,28 @@ export interface InvitationProject {
   thumbnail?: string | null;
 }
 
+export interface FoundUser {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  imageUrl: string | null;
+  isMember?: boolean;
+  memberRole?: string | null;
+  hasPendingInvitation?: boolean;
+}
+
+export interface FullProjectInfo {
+  id: string;
+  name: string;
+  description: string | null;
+  thumbnail: string | null;
+  visibility: string;
+  ownerId: string;
+  User: InvitationUser;
+  _count: { members: number };
+}
+
 export interface ProjectInvitation {
   id: string;
   projectId: string;
@@ -25,14 +47,14 @@ export interface ProjectInvitation {
   email: string | null;
   userId: string | null;
   token: string;
-  status: "pending" | "accepted" | "cancelled" | "expired";
+  status: "pending" | "accepted" | "declined" | "cancelled" | "expired";
   expiresAt: string;
   message: string | null;
   role: string;
   oneTime: boolean;
   createdAt: string;
   updatedAt: string;
-  project?: InvitationProject;
+  project?: InvitationProject & { User?: InvitationUser; _count?: { members: number } };
   invitedBy?: InvitationUser;
   user?: InvitationUser | null;
 }
@@ -40,6 +62,13 @@ export interface ProjectInvitation {
 export function useInvitations() {
   const apiRef = useRef(useApi());
   const [loading, setLoading] = useState(false);
+
+  const searchUsers = useCallback(async (query: string, projectId?: string) => {
+    if (query.trim().length < 2) return [];
+    let url = `users/search?q=${encodeURIComponent(query)}`;
+    if (projectId) url += `&projectId=${projectId}`;
+    return apiRef.current.get(url) as Promise<FoundUser[]>;
+  }, []);
 
   const inviteByEmail = useCallback(async (
     projectId: string,
@@ -78,6 +107,10 @@ export function useInvitations() {
     return apiRef.current.post(`invitations/${token}/accept`, {}) as Promise<{ ok: boolean; projectId: string; projectName: string }>;
   }, []);
 
+  const decline = useCallback(async (token: string) => {
+    return apiRef.current.post(`invitations/${token}/decline`, {}) as Promise<{ ok: boolean }>;
+  }, []);
+
   const cancel = useCallback(async (id: string) => {
     return apiRef.current.post(`invitations/${id}/cancel`, {}) as Promise<{ ok: boolean }>;
   }, []);
@@ -106,16 +139,29 @@ export function useInvitations() {
     }
   }, []);
 
+  const listSent = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await apiRef.current.get("me/invitations/sent") as ProjectInvitation[];
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     loading,
+    searchUsers,
     inviteByEmail,
     inviteByUser,
     generateLink,
     getByToken,
     accept,
+    decline,
     cancel,
     resend,
     listForProject,
     listMyPending,
+    listSent,
   };
 }

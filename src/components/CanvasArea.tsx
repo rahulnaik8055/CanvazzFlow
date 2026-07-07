@@ -70,6 +70,7 @@ interface CanvasAreaProps {
   guides: SnapGuide[];
   selectionRect: SelectionRect | null;
   collaboratorSelections?: CollaboratorSelection[];
+  canEdit?: boolean;
 }
 
 const ImageNode = ({ node, commonProps }: { node: Node; commonProps: any }) => {
@@ -230,7 +231,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
               rotation: node.rotation,
               opacity: node.opacity,
               zIndex: node.zIndex,
-              draggable: props.tool === "select" && !node.locked,
+              draggable: props.canEdit !== false && props.tool === "select" && !node.locked,
               onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
                 props.handleSelect(node.id, e.evt.metaKey, e.evt.shiftKey),
               onTap: () => props.handleSelect(node.id),
@@ -340,13 +341,12 @@ export default function CanvasArea(props: CanvasAreaProps) {
                 }
                 return newBox;
               }}
-              rotateEnabled={true}
-              enabledAnchors={[
-                "top-left",
-                "top-right",
-                "bottom-left",
-                "bottom-right",
-              ]}
+              rotateEnabled={props.canEdit !== false}
+              enabledAnchors={props.canEdit !== false ? [
+                "top-left", "top-center", "top-right",
+                "middle-left", "middle-right",
+                "bottom-left", "bottom-center", "bottom-right",
+              ] : []}
             />
           )}
         </Layer>

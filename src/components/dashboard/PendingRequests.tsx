@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion } from "motion/react";
 import { Check, X, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -27,14 +27,14 @@ interface PendingRequestsProps {
 }
 
 export function PendingRequests({ requests, onRespond }: PendingRequestsProps) {
-  const api = useApi();
+  const apiRef = useRef(useApi());
   const [local, setLocal] = useState(requests);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleApprove = useCallback(async (id: string) => {
     setActionLoading(id);
     try {
-      await api.patch(`access-requests/${id}/respond`, { approved: true });
+      await apiRef.current.patch(`access-requests/${id}/respond`, { approved: true });
       setLocal((prev) => prev.filter((r) => r.id !== id));
       toast.success("Request approved");
       onRespond?.();
@@ -43,12 +43,12 @@ export function PendingRequests({ requests, onRespond }: PendingRequestsProps) {
     } finally {
       setActionLoading(null);
     }
-  }, [api, onRespond]);
+  }, [onRespond]);
 
   const handleDeny = useCallback(async (id: string) => {
     setActionLoading(id);
     try {
-      await api.patch(`access-requests/${id}/respond`, { approved: false });
+      await apiRef.current.patch(`access-requests/${id}/respond`, { approved: false });
       setLocal((prev) => prev.filter((r) => r.id !== id));
       toast.success("Request denied");
       onRespond?.();
@@ -57,7 +57,7 @@ export function PendingRequests({ requests, onRespond }: PendingRequestsProps) {
     } finally {
       setActionLoading(null);
     }
-  }, [api, onRespond]);
+  }, [onRespond]);
 
   if (local.length === 0) {
     return (

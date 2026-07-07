@@ -208,11 +208,17 @@ export default function ProjectsPage() {
         <SkeletonGrid count={LIMIT} />
       ) : projects.length === 0 ? (
         <EmptyState
-          title={debouncedSearch ? "No results found" : "No projects yet"}
+          illustration="projects"
+          title={debouncedSearch ? `No results for "${debouncedSearch}"` : "No projects yet"}
           description={
             debouncedSearch
-              ? `No projects match "${debouncedSearch}"`
-              : "Create your first project to get started."
+              ? "Try a different search term or clear the search."
+              : "Create your first project and start collaborating with your team."
+          }
+          action={
+            debouncedSearch
+              ? undefined
+              : { label: "New Project", onClick: () => setModalOpen(true) }
           }
         />
       ) : (

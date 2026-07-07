@@ -9,6 +9,8 @@ import {
   ChevronLeft,
   Settings2,
 } from "lucide-react";
+import { Node } from "@/types/CanvasTypes";
+import LayersPanel from "./LayersPanel";
 
 interface LeftSidebarProps {
   showGrid: boolean;
@@ -18,6 +20,13 @@ interface LeftSidebarProps {
   smartGuides: boolean;
   setSmartGuides: (smart: boolean) => void;
   error: string | null;
+  nodes: Node[];
+  selectedIds: string[];
+  setSelectedIds: (ids: string[] | ((prev: string[]) => string[])) => void;
+  updateNodeProperty: (id: string, property: keyof Node, value: any) => void;
+  setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void;
+  saveToHistory: (nodes: Node[]) => void;
+  canEdit: boolean;
 }
 
 export default function LeftSidebar({
@@ -28,13 +37,20 @@ export default function LeftSidebar({
   smartGuides,
   setSmartGuides,
   error,
+  nodes,
+  selectedIds,
+  setSelectedIds,
+  updateNodeProperty,
+  setNodes,
+  saveToHistory,
+  canEdit,
 }: LeftSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div
       className="relative flex flex-col mt-14 z-10 transition-all duration-300 ease-in-out"
-      style={{ width: collapsed ? "48px" : "224px" }}
+      style={{ width: collapsed ? "48px" : "260px" }}
     >
       <div className="h-full bg-white border-r border-gray-100 shadow-[2px_0_12px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden transition-all duration-300 ease-in-out">
         <div className="flex items-center justify-between px-3 py-3 border-b border-gray-100 shrink-0">
@@ -62,13 +78,12 @@ export default function LeftSidebar({
         </div>
 
         <div
-          className="flex flex-col gap-1 p-3 overflow-hidden transition-all duration-300"
+          className="flex flex-col gap-1 p-3 overflow-hidden transition-all duration-300 shrink-0"
           style={{
             opacity: collapsed ? 0 : 1,
             pointerEvents: collapsed ? "none" : "auto",
           }}
         >
-          {/* Grid toggle */}
           <label className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer group transition-colors">
             <div className="flex items-center gap-2 min-w-0">
               <Grid3X3
@@ -91,7 +106,6 @@ export default function LeftSidebar({
             </div>
           </label>
 
-          {/* Snap to Grid toggle */}
           <label className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer group transition-colors">
             <div className="flex items-center gap-2 min-w-0">
               <Magnet
@@ -114,7 +128,6 @@ export default function LeftSidebar({
             </div>
           </label>
 
-          {/* Smart Guides toggle */}
           <label className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer group transition-colors">
             <div className="flex items-center gap-2 min-w-0">
               <Ruler
@@ -138,15 +151,34 @@ export default function LeftSidebar({
           </label>
         </div>
 
+        <div
+          className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
+          style={{
+            opacity: collapsed ? 0 : 1,
+            pointerEvents: collapsed ? "none" : "auto",
+          }}
+        >
+          <LayersPanel
+            nodes={nodes}
+            selectedIds={selectedIds}
+            setSelectedIds={setSelectedIds}
+            updateNodeProperty={updateNodeProperty}
+            setNodes={setNodes}
+            saveToHistory={saveToHistory}
+            canEdit={canEdit}
+            embedded
+          />
+        </div>
+
         {error && !collapsed && (
-          <div className="mx-3 mb-3 p-2.5 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2 transition-all duration-300">
+          <div className="mx-3 mb-3 p-2.5 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2 transition-all duration-300 shrink-0">
             <AlertCircle size={13} className="text-red-400 mt-0.5 shrink-0" />
             <p className="text-[12px] text-red-500 leading-relaxed">{error}</p>
           </div>
         )}
 
         {error && collapsed && (
-          <div className="flex justify-center mt-2">
+          <div className="flex justify-center mt-2 shrink-0">
             <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
           </div>
         )}

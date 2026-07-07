@@ -533,8 +533,8 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
   useEffect(() => {
     const update = () =>
       setCanvasSize({
-        width: Math.max(400, window.innerWidth - 700),
-        height: Math.max(300, window.innerHeight - 60),
+        width: Math.max(400, window.innerWidth - 548),
+        height: Math.max(300, window.innerHeight - 56),
       });
     update();
     window.addEventListener("resize", update);
@@ -603,10 +603,6 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
         setTool={setTool}
         undo={() => historyUndo(syncSetNodes, setSelectedIds)}
         redo={() => historyRedo(syncSetNodes, setSelectedIds)}
-        zoomIn={zoomIn}
-        zoomOut={zoomOut}
-        resetView={resetView}
-        stageScale={stageScale}
         canUndo={canEdit && historyStep > 0}
         canRedo={canEdit && historyStep < history.length - 1}
         saveIndicator={saveIndicator}
@@ -654,7 +650,7 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
         canEdit={canEdit}
       />
 
-      <div className="flex-1" style={{ position: "relative" }}>
+      <div className="flex-1 flex flex-col" style={{ position: "relative" }}>
         <CanvasArea
           addShape={addShapeAndSync}
           nodes={nodes}

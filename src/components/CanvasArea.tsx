@@ -56,7 +56,11 @@ interface CanvasAreaProps {
   resetView: () => void;
   stageRef: React.RefObject<Konva.Stage>;
   transformerRef: React.RefObject<Konva.Transformer | null>;
-  handleSelect: (id: string | null, metaKey?: boolean, shiftKey?: boolean) => void;
+  handleSelect: (
+    id: string | null,
+    metaKey?: boolean,
+    shiftKey?: boolean,
+  ) => void;
   handleDrag: (id: string, e: Konva.KonvaEventObject<DragEvent>) => void;
   handleDragStart: (id: string) => void;
   handleDragMove: (id: string, e: Konva.KonvaEventObject<DragEvent>) => void;
@@ -100,8 +104,6 @@ const ImageNode = ({ node, commonProps }: { node: Node; commonProps: any }) => {
 
 export default function CanvasArea(props: CanvasAreaProps) {
   const { addShape } = props;
-
-  console.log("Rendering CanvasArea with nodes:", props.nodes);
 
   const GridLayerComponent = useMemo(() => {
     if (!props.showGrid) return null;
@@ -231,7 +233,10 @@ export default function CanvasArea(props: CanvasAreaProps) {
               rotation: node.rotation,
               opacity: node.opacity,
               zIndex: node.zIndex,
-              draggable: props.canEdit !== false && props.tool === "select" && !node.locked,
+              draggable:
+                props.canEdit !== false &&
+                props.tool === "select" &&
+                !node.locked,
               onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
                 props.handleSelect(node.id, e.evt.metaKey, e.evt.shiftKey),
               onTap: () => props.handleSelect(node.id),
@@ -332,7 +337,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
             return null;
           })}
 
-            {props.selectedIds.length > 0 && props.tool === "select" && (
+          {props.selectedIds.length > 0 && props.tool === "select" && (
             <Transformer
               ref={props.transformerRef}
               boundBoxFunc={(oldBox, newBox) => {
@@ -342,11 +347,20 @@ export default function CanvasArea(props: CanvasAreaProps) {
                 return newBox;
               }}
               rotateEnabled={props.canEdit !== false}
-              enabledAnchors={props.canEdit !== false ? [
-                "top-left", "top-center", "top-right",
-                "middle-left", "middle-right",
-                "bottom-left", "bottom-center", "bottom-right",
-              ] : []}
+              enabledAnchors={
+                props.canEdit !== false
+                  ? [
+                      "top-left",
+                      "top-center",
+                      "top-right",
+                      "middle-left",
+                      "middle-right",
+                      "bottom-left",
+                      "bottom-center",
+                      "bottom-right",
+                    ]
+                  : []
+              }
             />
           )}
         </Layer>

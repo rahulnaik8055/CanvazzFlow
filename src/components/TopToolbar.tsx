@@ -4,8 +4,6 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Move,
   MousePointer,
-  ZoomIn,
-  ZoomOut,
   RotateCcw,
   Save,
   ArrowLeft,
@@ -58,10 +56,6 @@ interface TopToolbarProps {
   setTool: (tool: "select" | "pan") => void;
   undo: () => void;
   redo: () => void;
-  zoomIn: () => void;
-  zoomOut: () => void;
-  resetView: () => void;
-  stageScale: number;
   canUndo: boolean;
   canRedo: boolean;
   saveIndicator: "Live" | "Reconnecting" | "Connecting...";
@@ -100,10 +94,6 @@ export default function TopToolbar({
   setTool,
   undo,
   redo,
-  zoomIn,
-  zoomOut,
-  resetView,
-  stageScale,
   canUndo,
   canRedo,
   saveIndicator,
@@ -272,34 +262,6 @@ export default function TopToolbar({
             title="Redo (Ctrl+Shift+Z)"
           >
             <RotateCcw size={15} className="scale-x-[-1]" />
-          </button>
-        </div>
-
-        <div className="w-px h-5 bg-gray-200" />
-
-        <div className="flex items-center gap-1">
-          <button
-            onClick={zoomOut}
-            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            title="Zoom out"
-          >
-            <ZoomOut size={15} />
-          </button>
-          <span className="min-w-14 text-center text-sm text-gray-600 font-mono">
-            {Math.round(stageScale * 100)}%
-          </span>
-          <button
-            onClick={zoomIn}
-            className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            title="Zoom in"
-          >
-            <ZoomIn size={15} />
-          </button>
-          <button
-            onClick={resetView}
-            className="px-2.5 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            Reset
           </button>
         </div>
 

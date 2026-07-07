@@ -5,31 +5,26 @@ import {
   Stage,
   Layer,
   Rect,
-  Circle,
-  Text,
-  Transformer,
   Line,
-  Image,
-  Star,
+  Transformer,
 } from "react-konva";
 import Konva from "konva";
 import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
-  Frame,
   Star as StarIcon,
-  Minus,
   Diamond,
   Layout,
   Type,
   Square,
   Circle as CircleIcon,
-  ImageIcon,
+  Minus,
 } from "lucide-react";
 
-import { Node } from "@/types/CanvasTypes";
+import { Node, ShapeType } from "@/types/CanvasTypes";
 import { GRID_SIZE, MIN_SIZE } from "@/constants/CanvasConstants";
+import { renderNode } from "./NodeRenderer";
 import { SnapGuide } from "@/hooks/useSnapping";
 import { SelectionRect } from "@/hooks/useCanvasInteractions";
 
@@ -40,10 +35,7 @@ interface CollaboratorSelection {
 }
 
 interface CanvasAreaProps {
-  addShape: (
-    type: "rect" | "circle" | "text" | "frame" | "image" | "star" | "diamond",
-    file?: File,
-  ) => void;
+  addShape: (type: ShapeType) => void;
   nodes: Node[];
   canvasSize: { width: number; height: number };
   stageScale: number;
@@ -76,31 +68,6 @@ interface CanvasAreaProps {
   collaboratorSelections?: CollaboratorSelection[];
   canEdit?: boolean;
 }
-
-const ImageNode = ({ node, commonProps }: { node: Node; commonProps: any }) => {
-  const [image, setImage] = React.useState<HTMLImageElement | null>(null);
-
-  React.useEffect(() => {
-    if (node.imageUrl) {
-      const img = new window.Image();
-      img.src = node.imageUrl;
-      img.onload = () => setImage(img);
-      img.onerror = () => console.error("Failed to load image:", node.imageUrl);
-    }
-  }, [node.imageUrl]);
-
-  if (!image) return null;
-
-  return (
-    <Image
-      key={node.id}
-      {...commonProps}
-      image={image}
-      width={node.width}
-      height={node.height}
-    />
-  );
-};
 
 export default function CanvasArea(props: CanvasAreaProps) {
   const { addShape } = props;
@@ -207,7 +174,7 @@ export default function CanvasArea(props: CanvasAreaProps) {
       <Stage
         width={props.canvasSize.width}
         height={props.canvasSize.height}
-        className="bg-white rounded-lg shadow-sm border border-gray-200 "
+        className="bg-white shadow-sm border border-gray-200"
         scaleX={props.stageScale}
         scaleY={props.stageScale}
         x={props.stagePosition.x}
@@ -227,18 +194,15 @@ export default function CanvasArea(props: CanvasAreaProps) {
               id: node.id,
               x: node.x,
               y: node.y,
-              fill: node.fill,
-              stroke: node.stroke,
-              strokeWidth: node.strokeWidth,
               rotation: node.rotation,
               opacity: node.opacity,
-              zIndex: node.zIndex,
               draggable:
                 props.canEdit !== false &&
                 props.tool === "select" &&
                 !node.locked,
-              onClick: (e: Konva.KonvaEventObject<MouseEvent>) =>
-                props.handleSelect(node.id, e.evt.metaKey, e.evt.shiftKey),
+              onClick: (e: Konva.KonvaEventObject<MouseEvent>) => {
+                props.handleSelect(node.id, e.evt.metaKey, e.evt.shiftKey);
+              },
               onTap: () => props.handleSelect(node.id),
               onDragStart: () => props.handleDragStart(node.id),
               onDragMove: (e: Konva.KonvaEventObject<DragEvent>) =>
@@ -248,93 +212,14 @@ export default function CanvasArea(props: CanvasAreaProps) {
               onTransform: (e: Konva.KonvaEventObject<Event>) =>
                 props.handleTransform(node.id, e),
               onTransformEnd: () => props.handleTransformEnd(),
+              strokeWidth: node.strokeWidth,
             };
 
-            if (node.type === "rect") {
-              return (
-                <Rect
-                  key={node.id}
-                  {...commonProps}
-                  width={node.width}
-                  height={node.height}
-                  cornerRadius={4}
-                />
-              );
-            }
-            if (node.type === "circle") {
-              return (
-                <Circle key={node.id} {...commonProps} radius={node.radius} />
-              );
-            }
-            if (node.type === "text") {
-              return (
-                <Text
-                  key={node.id}
-                  {...commonProps}
-                  text={node.text}
-                  fontSize={node.fontSize}
-                  fontFamily={node.fontFamily}
-                  width={node.width}
-                  height={node.height}
-                />
-              );
-            }
-            if (node.type === "frame") {
-              return (
-                <Rect
-                  key={node.id}
-                  {...commonProps}
-                  width={node.width}
-                  height={node.height}
-                  dash={node.strokeStyle === "dashed" ? [5, 5] : undefined}
-                />
-              );
-            }
-            if (node.type === "star") {
-              return (
-                <Star
-                  key={node.id}
-                  {...commonProps}
-                  numPoints={5}
-                  innerRadius={node.width * 0.4}
-                  outerRadius={node.width * 0.6}
-                />
-              );
-            }
-            if (node.type === "diamond") {
-              const points = [
-                node.width / 2,
-                0,
-                node.width,
-                node.height / 2,
-                node.width / 2,
-                node.height,
-                0,
-                node.height / 2,
-              ];
-              return (
-                <Line
-                  key={node.id}
-                  {...commonProps}
-                  points={points}
-                  closed={true}
-                  fill={node.fill}
-                  stroke={node.stroke}
-                  strokeWidth={node.strokeWidth}
-                />
-              );
-            }
-
-            if (node.type === "image") {
-              return (
-                <ImageNode
-                  key={node.id}
-                  node={node}
-                  commonProps={commonProps}
-                />
-              );
-            }
-            return null;
+            return renderNode(
+              node,
+              commonProps,
+              props.selectedIds.includes(node.id),
+            );
           })}
 
           {props.selectedIds.length > 0 && props.tool === "select" && (
@@ -370,8 +255,8 @@ export default function CanvasArea(props: CanvasAreaProps) {
             if (!cs.selectedId) return null;
             const node = props.nodes.find((n) => n.id === cs.selectedId);
             if (!node) return null;
-            const w = node.type === "circle" ? node.radius * 2 : node.width;
-            const h = node.type === "circle" ? node.radius * 2 : node.height;
+            const w = node.type === "circle" ? (node.radius || 50) * 2 : node.width;
+            const h = node.type === "circle" ? (node.radius || 50) * 2 : node.height;
             return (
               <Rect
                 key={`sel-${cs.connectionId}`}
@@ -397,97 +282,86 @@ export default function CanvasArea(props: CanvasAreaProps) {
         </Layer>
       </Stage>
 
-      <div className="absolute bottom-6 right-6 bg-white rounded-lg shadow-lg border border-gray-200 p-2 flex flex-col gap-1">
+      {/* Zoom controls */}
+      <div className="absolute bottom-6 right-6 bg-white rounded-lg shadow-lg border border-gray-200 p-1.5 flex flex-col gap-1">
         <button
           onClick={props.zoomIn}
-          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900"
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-900"
           title="Zoom In"
         >
-          <ZoomIn size={18} />
+          <ZoomIn size={16} />
         </button>
+        <div className="text-center text-[10px] font-mono text-gray-400 py-0.5 select-none">
+          {Math.round(props.stageScale * 100)}%
+        </div>
         <button
           onClick={props.zoomOut}
-          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900"
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-900"
           title="Zoom Out"
         >
-          <ZoomOut size={18} />
+          <ZoomOut size={16} />
         </button>
+        <div className="w-full h-px bg-gray-100" />
         <button
           onClick={props.resetView}
-          className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900"
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-900"
           title="Reset View"
         >
-          <RotateCcw size={18} />
+          <RotateCcw size={16} />
         </button>
       </div>
 
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-lg p-2">
-        <div className="flex items-center gap-1">
+      {/* Shape toolbar */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-lg border border-gray-200 p-1.5">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={() => addShape("rect")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
-            title="Add Rectangle"
+            className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Rectangle"
           >
-            <Square className="w-5 h-5 text-gray-700" />
+            <Square className="w-4 h-4 text-gray-600" />
           </button>
-
           <button
             onClick={() => addShape("circle")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
-            title="Add Circle"
+            className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Circle"
           >
-            <CircleIcon className="w-5 h-5 text-gray-700" />
+            <CircleIcon className="w-4 h-4 text-gray-600" />
           </button>
-
           <button
             onClick={() => addShape("text")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
-            title="Add Text"
+            className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Text"
           >
-            <Type className="w-5 h-5 text-gray-700" />
+            <Type className="w-4 h-4 text-gray-600" />
           </button>
-
           <button
             onClick={() => addShape("frame")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
-            title="Add Frame"
+            className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Frame"
           >
-            <Frame className="w-5 h-5 text-gray-700" />
+            <Layout className="w-4 h-4 text-gray-600" />
           </button>
-
           <button
             onClick={() => addShape("star")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
-            title="Add Star"
+            className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Star"
           >
-            <StarIcon className="w-5 h-5 text-gray-700" />
+            <StarIcon className="w-4 h-4 text-gray-600" />
           </button>
-
           <button
             onClick={() => addShape("diamond")}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
-            title="Add Diamond"
+            className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Diamond"
           >
-            <Diamond className="w-5 h-5 text-gray-700" />
+            <Diamond className="w-4 h-4 text-gray-600" />
           </button>
-
           <button
-            onClick={() => {
-              const input = document.createElement("input");
-              input.type = "file";
-              input.accept = "image/*";
-              input.onchange = (e: Event) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
-                if (file) {
-                  addShape("image", file);
-                }
-              };
-              input.click();
-            }}
-            className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
-            title="Add Image"
+            onClick={() => addShape("arrow")}
+            className="w-9 h-9 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors"
+            title="Arrow"
           >
-            <ImageIcon className="w-5 h-5 text-gray-700" />
+            <Minus className="w-4 h-4 text-gray-600" />
           </button>
         </div>
       </div>

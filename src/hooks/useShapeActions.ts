@@ -1,11 +1,6 @@
 import { useCallback } from "react";
-import { Node } from "@/types/CanvasTypes";
-import { generateId, calculateShapeCenter } from "@/lib/canvasUtils";
-import {
-  FRAME_DEFAULT_STROKE,
-  FRAME_DEFAULT_STROKE_WIDTH,
-  FRAME_DEFAULT_STROKE_STYLE,
-} from "@/constants/CanvasConstants";
+import { Node, ShapeType } from "@/types/CanvasTypes";
+import { generateId, calculateShapeCenter, createDefaultNode } from "@/lib/canvasUtils";
 
 export const useShapeActions = (
   nodes: Node[],
@@ -19,10 +14,7 @@ export const useShapeActions = (
   setError: (error: string | null) => void,
 ) => {
   const addShape = useCallback(
-    async (
-      type: "rect" | "circle" | "text" | "frame" | "star" | "diamond" | "image",
-      file?: File,
-    ) => {
+    (type: ShapeType) => {
       try {
         setError(null);
         const { x, y } = calculateShapeCenter(
@@ -33,104 +25,7 @@ export const useShapeActions = (
         const maxZIndex =
           nodes.length > 0 ? Math.max(...nodes.map((n) => n.zIndex)) : 0;
 
-        let newNode: Node;
-
-        if (type === "frame") {
-          newNode = {
-            id: generateId(),
-            type,
-            x,
-            y,
-            width: 150,
-            height: 100,
-            radius: 0,
-            text: "",
-            fill: "#fff",
-            stroke: FRAME_DEFAULT_STROKE,
-            strokeWidth: FRAME_DEFAULT_STROKE_WIDTH,
-            strokeStyle: FRAME_DEFAULT_STROKE_STYLE,
-            rotation: 0,
-            opacity: 1,
-            fontSize: 16,
-            fontFamily: "Inter, system-ui, sans-serif",
-            zIndex: maxZIndex + 1,
-            visible: true,
-            locked: false,
-            name: "Frame",
-            parentId: null,
-          };
-        } else if (type === "image" && file) {
-          const imageUrl = URL.createObjectURL(file);
-          await new Promise((resolve, reject) => {
-            const img = new window.Image();
-            img.src = imageUrl;
-            img.onload = resolve;
-            img.onerror = () => reject(new Error("Failed to load image"));
-          });
-          newNode = {
-            id: generateId(),
-            type,
-            x,
-            y,
-            width: 200,
-            height: 200,
-            radius: 0,
-            text: "",
-            fill: "transparent",
-            stroke: "#ffffff",
-            strokeWidth: 2,
-            rotation: 0,
-            opacity: 1,
-            fontSize: 16,
-            fontFamily: "Inter, system-ui, sans-serif",
-            zIndex: maxZIndex + 1,
-            imageUrl,
-            visible: true,
-            locked: false,
-            name: "Image",
-            parentId: null,
-          };
-        } else {
-          const typeLabel =
-            type === "rect" ? "Rectangle" :
-            type === "circle" ? "Ellipse" :
-            type === "text" ? "Text" :
-            type === "star" ? "Star" :
-            type === "diamond" ? "Diamond" : "Shape";
-
-          newNode = {
-            id: generateId(),
-            type,
-            x,
-            y,
-            width:
-              type === "text"
-                ? 120
-                : type === "star" || type === "diamond"
-                  ? 100
-                  : 120,
-            height:
-              type === "text"
-                ? 40
-                : type === "star" || type === "diamond"
-                  ? 100
-                  : 80,
-            radius: type === "circle" ? 50 : 0,
-            text: type === "text" ? "Sample Text" : "",
-            fill: type === "text" ? "#1f2937" : "#3b82f6",
-            stroke: "#1e40af",
-            strokeWidth: 2,
-            rotation: 0,
-            opacity: 1,
-            fontSize: 16,
-            fontFamily: "Inter, system-ui, sans-serif",
-            zIndex: maxZIndex + 1,
-            visible: true,
-            locked: false,
-            name: typeLabel,
-            parentId: null,
-          };
-        }
+        const newNode = createDefaultNode(type, x, y, maxZIndex);
 
         const newNodes = [...nodes, newNode];
         setNodes(newNodes);
@@ -142,17 +37,7 @@ export const useShapeActions = (
         console.error("Error adding shape:", err);
       }
     },
-    [
-      nodes,
-      stagePosition,
-      canvasSize,
-      stageScale,
-      setNodes,
-      saveToHistory,
-      setSelectedIds,
-      setTool,
-      setError,
-    ],
+    [nodes, stagePosition, canvasSize, stageScale, setNodes, saveToHistory, setSelectedIds, setTool, setError],
   );
 
   const duplicateShape = useCallback(
@@ -171,7 +56,7 @@ export const useShapeActions = (
         newNodes.push({
           ...node,
           id: newId,
-          name: node.name ? `${node.name} copy` : undefined,
+          name: node.name ? `${node.name} copy` : node.name,
           x: node.x + 20,
           y: node.y + 20,
           zIndex: maxZIndex + 1 + newIds.length,
@@ -208,5 +93,104 @@ export const useShapeActions = (
     [nodes, setNodes, saveToHistory],
   );
 
-  return { addShape, duplicateShape, deleteShape, updateNodeProperty };
+  const bringForward = useCallback(
+    (selectedIds: string[]) => {
+      if (selectedIds.length === 0) return;
+      const newNodes = nodes.map((n) => {
+        if (!selectedIds.includes(n.id)) return n;
+        const maxAbove = Math.max(
+          ...nodes
+            .filter((m) => !selectedIds.includes(m.id) && m.zIndex > n.zIndex)
+            .map((m) => m.zIndex),
+          n.zIndex,
+        );
+        return maxAbove > n.zIndex ? { ...n, zIndex: maxAbove } : n;
+      });
+      setNodes(newNodes);
+      saveToHistory(newNodes);
+    },
+    [nodes, setNodes, saveToHistory],
+  );
+
+  const sendBackward = useCallback(
+    (selectedIds: string[]) => {
+      if (selectedIds.length === 0) return;
+      const newNodes = nodes.map((n) => {
+        if (!selectedIds.includes(n.id)) return n;
+        const minBelow = Math.min(
+          ...nodes
+            .filter((m) => !selectedIds.includes(m.id) && m.zIndex < n.zIndex)
+            .map((m) => m.zIndex),
+          n.zIndex,
+        );
+        return minBelow < n.zIndex ? { ...n, zIndex: minBelow } : n;
+      });
+      setNodes(newNodes);
+      saveToHistory(newNodes);
+    },
+    [nodes, setNodes, saveToHistory],
+  );
+
+  const bringToFront = useCallback(
+    (selectedIds: string[]) => {
+      if (selectedIds.length === 0) return;
+      const maxZ = nodes.length > 0 ? Math.max(...nodes.map((n) => n.zIndex)) : 0;
+      const newNodes = nodes.map((n) =>
+        selectedIds.includes(n.id) ? { ...n, zIndex: maxZ + 1 } : n,
+      );
+      setNodes(newNodes);
+      saveToHistory(newNodes);
+    },
+    [nodes, setNodes, saveToHistory],
+  );
+
+  const sendToBack = useCallback(
+    (selectedIds: string[]) => {
+      if (selectedIds.length === 0) return;
+      const minZ = nodes.length > 0 ? Math.min(...nodes.map((n) => n.zIndex)) : 0;
+      const newNodes = nodes.map((n) =>
+        selectedIds.includes(n.id) ? { ...n, zIndex: minZ - 1 } : n,
+      );
+      setNodes(newNodes);
+      saveToHistory(newNodes);
+    },
+    [nodes, setNodes, saveToHistory],
+  );
+
+  const toggleLock = useCallback(
+    (selectedIds: string[]) => {
+      if (selectedIds.length === 0) return;
+      const newNodes = nodes.map((n) =>
+        selectedIds.includes(n.id) ? { ...n, locked: !n.locked } : n,
+      );
+      setNodes(newNodes);
+      saveToHistory(newNodes);
+    },
+    [nodes, setNodes, saveToHistory],
+  );
+
+  const toggleVisibility = useCallback(
+    (selectedIds: string[]) => {
+      if (selectedIds.length === 0) return;
+      const newNodes = nodes.map((n) =>
+        selectedIds.includes(n.id) ? { ...n, visible: !n.visible } : n,
+      );
+      setNodes(newNodes);
+      saveToHistory(newNodes);
+    },
+    [nodes, setNodes, saveToHistory],
+  );
+
+  return {
+    addShape,
+    duplicateShape,
+    deleteShape,
+    updateNodeProperty,
+    bringForward,
+    sendBackward,
+    bringToFront,
+    sendToBack,
+    toggleLock,
+    toggleVisibility,
+  };
 };

@@ -51,36 +51,65 @@ export default function EditorPage() {
   const visitedRef = useRef(false);
   const [accessState, setAccessState] = useState<
     "loading" | "granted" | "denied" | "error"
-  >("loading");
+  >( "loading" );
+
+  const fetchAccess = useCallback(() => {
+    api.get(`project/${projectId}/pages/${pageId}/my-role`).then(({ role }) => {
+      setRole(role);
+      return Promise.all([
+        api.get(`pages/${pageId}/nodes`),
+        api.get(`project/${projectId}`),
+      ]);
+    }).then(([nodes, project]) => {
+      setInitialNodes(nodes as Node[]);
+      setProjectName(project.name);
+      setAccessState("granted");
+    }).catch((err) => {
+      setAccessState(err?.status === 403 ? "denied" : "error");
+      if (err?.status !== 403) {
+        toast.error("Failed to load canvas data");
+      }
+    });
+  }, [projectId, pageId]);
 
   useEffect(() => {
-    api
-      .get(`project/${projectId}/pages/${pageId}/my-role`)
-      .then(({ role }) => {
-        setRole(role);
-        return Promise.all([
-          api.get(`pages/${pageId}/nodes`),
-          api.get(`project/${projectId}`),
-        ]);
-      })
-      .then(([nodes, project]) => {
-        setInitialNodes(nodes);
-        setProjectName(project.name);
-        setAccessState("granted");
-      })
-      .catch((err) => {
-        setAccessState(err?.status === 403 ? "denied" : "error");
-        if (err?.status !== 403) {
-          toast.error("Failed to load canvas data");
+    fetchAccess();
+  }, [fetchAccess]);
+
+  // Poll for access changes so the UI reacts immediately without reload
+  const pollingRef = useRef(false);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (pollingRef.current) return;
+      pollingRef.current = true;
+
+      api.get(`project/${projectId}/pages/${pageId}/my-role`).then(() => {
+        pollingRef.current = false;
+        setAccessState((prev) => {
+          if (prev === "denied") {
+            fetchAccess();
+            return "loading";
+          }
+          return prev;
+        });
+      }).catch((err) => {
+        pollingRef.current = false;
+        if (err?.status === 403) {
+          setAccessState("denied");
         }
       });
-  }, [pageId, projectId]);
+    }, 4000);
+    return () => {
+      clearInterval(interval);
+      pollingRef.current = false;
+    };
+  }, [projectId, pageId]);
 
   useEffect(() => {
     if (visitedRef.current) return;
     visitedRef.current = true;
     api.post(`project/${projectId}/pages/${pageId}/visit`).catch(() => {});
-  }, [pageId, projectId]);
+  }, [projectId, pageId]);
 
   if (accessState === "loading") return <LoadingOverlay isLoading />;
 
@@ -140,7 +169,7 @@ function NoAccessScreen({
     <div className="flex h-screen flex-col items-center justify-center gap-4 bg-gray-50">
       <div className="flex flex-col items-center gap-2 text-center">
         <p className="text-sm font-medium text-gray-900">
-          You don't have access to this canvas
+          You don&apos;t have access to this canvas
         </p>
         <p className="text-xs text-gray-400">
           Ask the owner to invite you, or request access below.
@@ -181,7 +210,7 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
     if (role !== "owner") return;
     api.get(`projects/${projectId}/members`).then((data: any[]) => {
       const unique = Array.from(new Map(data.map((m: any) => [m.id, m])).values());
-      setMembers(unique);
+      setMembers(unique as any[]);
     }).catch(() => {});
   }, [projectId, role]);
 
@@ -245,7 +274,6 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
   const [, updateMyPresence] = useMyPresence();
   const others = useOthers();
 
-  // Broadcast deselection to collaborators whenever selectedIds becomes empty
   useEffect(() => {
     if (selectedIds.length === 0) {
       updateMyPresence({ selectedId: null, selectedName: null });
@@ -305,18 +333,28 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
     history,
   } = useCanvasHistory(nodes);
 
-  const { addShape, duplicateShape, deleteShape, updateNodeProperty } =
-    useShapeActions(
-      nodes,
-      syncSetNodes,
-      saveToHistory,
-      stagePosition,
-      canvasSize,
-      stageScale,
-      setSelectedIds,
-      setTool,
-      setError,
-    );
+  const {
+    addShape,
+    duplicateShape,
+    deleteShape,
+    updateNodeProperty,
+    bringForward,
+    sendBackward,
+    bringToFront,
+    sendToBack,
+    toggleLock,
+    toggleVisibility,
+  } = useShapeActions(
+    nodes,
+    syncSetNodes,
+    saveToHistory,
+    stagePosition,
+    canvasSize,
+    stageScale,
+    setSelectedIds,
+    setTool,
+    setError,
+  );
 
   const addShapeAndSync = useCallback(
     (...args: Parameters<typeof addShape>) => {
@@ -468,7 +506,6 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
     updateMyPresence({ cursor: null });
   }, [updateMyPresence]);
 
-  // Space-hold for temporary pan (Figma-like)
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.code === "Space" && !e.repeat) {
@@ -494,26 +531,86 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
     if (!canEdit) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+      const ctrl = e.ctrlKey || e.metaKey;
+
+      // Undo / Redo
+      if (ctrl && e.key === "z") {
         e.preventDefault();
         if (e.shiftKey) historyRedo(syncSetNodes, setSelectedIds);
         else historyUndo(syncSetNodes, setSelectedIds);
         return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-        if (selectedIds.length > 0) {
-          e.preventDefault();
-          duplicateShapeAndSync(selectedIds);
-        }
+      // Duplicate (Ctrl+D or Ctrl+C with selection)
+      if ((ctrl && e.key === "d") || (ctrl && e.key === "c" && selectedIds.length > 0)) {
+        e.preventDefault();
+        duplicateShapeAndSync(selectedIds);
         return;
       }
 
+      // Delete
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedIds.length > 0) {
           e.preventDefault();
           deleteShapeAndSync(selectedIds);
         }
+        return;
+      }
+
+      // Copy (Ctrl+C) - let browser handle clipboard if nothing selected
+      if (ctrl && e.key === "c" && selectedIds.length === 0) return;
+
+      // Select All
+      if (ctrl && e.key === "a") {
+        e.preventDefault();
+        handleSelectAndBroadcast(null);
+        setSelectedIds(nodes.filter((n) => n.visible !== false).map((n) => n.id));
+        return;
+      }
+
+      // Zoom
+      if (ctrl && (e.key === "=" || e.key === "+")) {
+        e.preventDefault();
+        zoomIn();
+        return;
+      }
+      if (ctrl && e.key === "-") {
+        e.preventDefault();
+        zoomOut();
+        return;
+      }
+      if (ctrl && e.key === "0") {
+        e.preventDefault();
+        resetView();
+        return;
+      }
+
+      // Arrange shortcuts
+      if (e.key === "]" && !ctrl) {
+        e.preventDefault();
+        bringForward(selectedIds);
+        return;
+      }
+      if (e.key === "[" && !ctrl) {
+        e.preventDefault();
+        sendBackward(selectedIds);
+        return;
+      }
+      if (e.key === "}" && !ctrl) {
+        e.preventDefault();
+        bringToFront(selectedIds);
+        return;
+      }
+      if (e.key === "{" && !ctrl) {
+        e.preventDefault();
+        sendToBack(selectedIds);
+        return;
+      }
+
+      // Escape to deselect
+      if (e.key === "Escape") {
+        setSelectedIds([]);
+        updateMyPresence({ selectedId: null, selectedName: null });
         return;
       }
     };
@@ -523,11 +620,22 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
   }, [
     canEdit,
     selectedIds,
+    nodes,
     historyUndo,
     historyRedo,
     syncSetNodes,
     duplicateShapeAndSync,
     deleteShapeAndSync,
+    bringForward,
+    sendBackward,
+    bringToFront,
+    sendToBack,
+    handleSelectAndBroadcast,
+    setSelectedIds,
+    zoomIn,
+    zoomOut,
+    resetView,
+    updateMyPresence,
   ]);
 
   useEffect(() => {
@@ -544,17 +652,12 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
   useIdleDetection(
     useCallback(
       (isIdle: boolean) => {
-        updateMyPresence({
-          isIdle,
-          lastActive: Date.now(),
-        });
+        updateMyPresence({ isIdle, lastActive: Date.now() });
       },
       [updateMyPresence],
     ),
     useCallback(() => {
-      updateMyPresence({
-        lastActive: Date.now(),
-      });
+      updateMyPresence({ lastActive: Date.now() });
     }, [updateMyPresence]),
   );
 
@@ -648,6 +751,7 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
         setNodes={syncSetNodes}
         saveToHistory={saveToHistory}
         canEdit={canEdit}
+        addShape={addShapeAndSync}
       />
 
       <div className="flex-1 flex flex-col" style={{ position: "relative" }}>
@@ -699,6 +803,12 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
         updateNodeProperty={updatePropertyAndSync}
         duplicateShape={() => duplicateShapeAndSync(selectedIds)}
         deleteShape={() => deleteShapeAndSync(selectedIds)}
+        bringForward={() => bringForward(selectedIds)}
+        sendBackward={() => sendBackward(selectedIds)}
+        bringToFront={() => bringToFront(selectedIds)}
+        sendToBack={() => sendToBack(selectedIds)}
+        toggleLock={() => toggleLock(selectedIds)}
+        toggleVisibility={() => toggleVisibility(selectedIds)}
         canEdit={canEdit}
       />
 

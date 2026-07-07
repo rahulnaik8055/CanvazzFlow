@@ -8,9 +8,12 @@ import {
   AlertCircle,
   ChevronLeft,
   Settings2,
+  Plus,
+  Layers,
 } from "lucide-react";
-import { Node } from "@/types/CanvasTypes";
+import { Node, ShapeType } from "@/types/CanvasTypes";
 import LayersPanel from "./LayersPanel";
+import InsertPanel from "./InsertPanel";
 
 interface LeftSidebarProps {
   showGrid: boolean;
@@ -27,6 +30,7 @@ interface LeftSidebarProps {
   setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void;
   saveToHistory: (nodes: Node[]) => void;
   canEdit: boolean;
+  addShape: (type: ShapeType, file?: File) => void;
 }
 
 export default function LeftSidebar({
@@ -44,8 +48,10 @@ export default function LeftSidebar({
   setNodes,
   saveToHistory,
   canEdit,
+  addShape,
 }: LeftSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [tab, setTab] = useState<"insert" | "layers">("insert");
 
   return (
     <div
@@ -55,16 +61,38 @@ export default function LeftSidebar({
       <div className="h-full bg-white border-r border-gray-100 shadow-[2px_0_12px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden transition-all duration-300 ease-in-out">
         <div className="flex items-center justify-between px-3 py-3 border-b border-gray-100 shrink-0">
           {!collapsed && (
-            <div className="flex items-center gap-2 overflow-hidden">
-              <Settings2 size={13} className="text-gray-400 shrink-0" />
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 whitespace-nowrap">
-                Tools
-              </span>
-            </div>
+            <>
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                <button
+                  onClick={() => setTab("insert")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                    tab === "insert"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <Plus size={12} />
+                  Insert
+                </button>
+                <button
+                  onClick={() => setTab("layers")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                    tab === "layers"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <Layers size={12} />
+                  Layers
+                </button>
+              </div>
+            </>
           )}
           <button
             onClick={() => setCollapsed((c) => !c)}
-            className={`p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all duration-300 ${collapsed ? "mx-auto" : "ml-auto"}`}
+            className={`p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all duration-300 ${
+              collapsed ? "mx-auto" : "ml-auto"
+            }`}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <ChevronLeft
@@ -158,16 +186,20 @@ export default function LeftSidebar({
             pointerEvents: collapsed ? "none" : "auto",
           }}
         >
-          <LayersPanel
-            nodes={nodes}
-            selectedIds={selectedIds}
-            setSelectedIds={setSelectedIds}
-            updateNodeProperty={updateNodeProperty}
-            setNodes={setNodes}
-            saveToHistory={saveToHistory}
-            canEdit={canEdit}
-            embedded
-          />
+          {tab === "insert" ? (
+            <InsertPanel addShape={addShape} canEdit={canEdit} />
+          ) : (
+            <LayersPanel
+              nodes={nodes}
+              selectedIds={selectedIds}
+              setSelectedIds={setSelectedIds}
+              updateNodeProperty={updateNodeProperty}
+              setNodes={setNodes}
+              saveToHistory={saveToHistory}
+              canEdit={canEdit}
+              embedded
+            />
+          )}
         </div>
 
         {error && !collapsed && (

@@ -3,14 +3,23 @@ import { createRoomContext } from "@liveblocks/react";
 import { Node } from "@/types/CanvasTypes";
 import { toast } from "sonner";
 
+let _authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  _authToken = token;
+}
+
 export const client = createClient({
   authEndpoint: async (room) => {
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (_authToken) headers["Authorization"] = `Bearer ${_authToken}`;
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/liveblocks/auth`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           credentials: "include",
           body: JSON.stringify({ room }),
         },

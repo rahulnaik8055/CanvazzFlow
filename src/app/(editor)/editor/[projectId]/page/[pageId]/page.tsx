@@ -34,6 +34,7 @@ import TopToolbar from "@/components/TopToolbar";
 import CollaboratorCursors from "@/components/editor/CollaboratorCursors";
 import { RequestAccessModal } from "@/components/requests/RequestAccessModal";
 import { AccessRequestBanner } from "@/components/common/AccessRequestBanner";
+import { setAuthToken } from "@/liveblocks.config";
 
 type Role = "owner" | "editor" | "viewer";
 
@@ -43,7 +44,11 @@ export default function EditorPage() {
     projectId: string;
   }>();
   const api = useApi();
-  const { userId } = useAuth();
+  const { userId, getToken } = useAuth();
+
+  useEffect(() => {
+    getToken().then((token) => setAuthToken(token ?? null));
+  }, [getToken]);
 
   const [initialNodes, setInitialNodes] = useState<Node[] | null>(null);
   const [role, setRole] = useState<Role | null>(null);

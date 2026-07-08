@@ -1,0 +1,220 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  Grid3X3,
+  Magnet,
+  Ruler,
+  AlertCircle,
+  ChevronLeft,
+  Settings2,
+  Plus,
+  Layers,
+} from "lucide-react";
+import { Node, ShapeType } from "@/types/CanvasTypes";
+import LayersPanel from "./LayersPanel";
+import InsertPanel from "./InsertPanel";
+
+interface LeftSidebarProps {
+  showGrid: boolean;
+  setShowGrid: (show: boolean) => void;
+  snapToGrid: boolean;
+  setSnapToGrid: (snap: boolean) => void;
+  smartGuides: boolean;
+  setSmartGuides: (smart: boolean) => void;
+  error: string | null;
+  nodes: Node[];
+  selectedIds: string[];
+  setSelectedIds: (ids: string[] | ((prev: string[]) => string[])) => void;
+  updateNodeProperty: (id: string, property: keyof Node, value: any) => void;
+  setNodes: (nodes: Node[] | ((prev: Node[]) => Node[])) => void;
+  saveToHistory: (nodes: Node[]) => void;
+  canEdit: boolean;
+  addShape: (type: ShapeType, file?: File) => void;
+}
+
+export default function LeftSidebar({
+  showGrid,
+  setShowGrid,
+  snapToGrid,
+  setSnapToGrid,
+  smartGuides,
+  setSmartGuides,
+  error,
+  nodes,
+  selectedIds,
+  setSelectedIds,
+  updateNodeProperty,
+  setNodes,
+  saveToHistory,
+  canEdit,
+  addShape,
+}: LeftSidebarProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [tab, setTab] = useState<"insert" | "layers">("insert");
+
+  return (
+    <div
+      className="relative flex flex-col mt-14 z-10 transition-all duration-300 ease-in-out"
+      style={{ width: collapsed ? "48px" : "260px" }}
+    >
+      <div className="h-full bg-white border-r border-gray-100 shadow-[2px_0_12px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden transition-all duration-300 ease-in-out">
+        <div className="flex items-center justify-between px-3 py-3 border-b border-gray-100 shrink-0">
+          {!collapsed && (
+            <>
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                <button
+                  onClick={() => setTab("insert")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                    tab === "insert"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <Plus size={12} />
+                  Insert
+                </button>
+                <button
+                  onClick={() => setTab("layers")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                    tab === "layers"
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <Layers size={12} />
+                  Layers
+                </button>
+              </div>
+            </>
+          )}
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className={`p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-all duration-300 ${
+              collapsed ? "mx-auto" : "ml-auto"
+            }`}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <ChevronLeft
+              size={15}
+              className="transition-transform duration-300"
+              style={{
+                transform: collapsed ? "rotate(180deg)" : "rotate(0deg)",
+              }}
+            />
+          </button>
+        </div>
+
+        <div
+          className="flex flex-col gap-1 p-3 overflow-hidden transition-all duration-300 shrink-0"
+          style={{
+            opacity: collapsed ? 0 : 1,
+            pointerEvents: collapsed ? "none" : "auto",
+          }}
+        >
+          <label className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer group transition-colors">
+            <div className="flex items-center gap-2 min-w-0">
+              <Grid3X3
+                size={13}
+                className="text-gray-400 group-hover:text-gray-600 shrink-0 transition-colors"
+              />
+              <span className="text-[13px] text-gray-600 font-medium whitespace-nowrap">
+                Show Grid
+              </span>
+            </div>
+            <div className="relative shrink-0">
+              <input
+                type="checkbox"
+                checked={showGrid}
+                onChange={(e) => setShowGrid(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-4 rounded-full bg-gray-200 peer-checked:bg-blue-500 transition-colors duration-200" />
+              <div className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-4" />
+            </div>
+          </label>
+
+          <label className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer group transition-colors">
+            <div className="flex items-center gap-2 min-w-0">
+              <Magnet
+                size={13}
+                className="text-gray-400 group-hover:text-gray-600 shrink-0 transition-colors"
+              />
+              <span className="text-[13px] text-gray-600 font-medium whitespace-nowrap">
+                Snap to Grid
+              </span>
+            </div>
+            <div className="relative shrink-0">
+              <input
+                type="checkbox"
+                checked={snapToGrid}
+                onChange={(e) => setSnapToGrid(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-4 rounded-full bg-gray-200 peer-checked:bg-blue-500 transition-colors duration-200" />
+              <div className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-4" />
+            </div>
+          </label>
+
+          <label className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer group transition-colors">
+            <div className="flex items-center gap-2 min-w-0">
+              <Ruler
+                size={13}
+                className="text-gray-400 group-hover:text-gray-600 shrink-0 transition-colors"
+              />
+              <span className="text-[13px] text-gray-600 font-medium whitespace-nowrap">
+                Smart Guides
+              </span>
+            </div>
+            <div className="relative shrink-0">
+              <input
+                type="checkbox"
+                checked={smartGuides}
+                onChange={(e) => setSmartGuides(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-4 rounded-full bg-gray-200 peer-checked:bg-blue-500 transition-colors duration-200" />
+              <div className="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-200 peer-checked:translate-x-4" />
+            </div>
+          </label>
+        </div>
+
+        <div
+          className="flex-1 flex flex-col overflow-hidden transition-all duration-300"
+          style={{
+            opacity: collapsed ? 0 : 1,
+            pointerEvents: collapsed ? "none" : "auto",
+          }}
+        >
+          {tab === "insert" ? (
+            <InsertPanel addShape={addShape} canEdit={canEdit} />
+          ) : (
+            <LayersPanel
+              nodes={nodes}
+              selectedIds={selectedIds}
+              setSelectedIds={setSelectedIds}
+              updateNodeProperty={updateNodeProperty}
+              setNodes={setNodes}
+              saveToHistory={saveToHistory}
+              canEdit={canEdit}
+              embedded
+            />
+          )}
+        </div>
+
+        {error && !collapsed && (
+          <div className="mx-3 mb-3 p-2.5 bg-red-50 border border-red-100 rounded-lg flex items-start gap-2 transition-all duration-300 shrink-0">
+            <AlertCircle size={13} className="text-red-400 mt-0.5 shrink-0" />
+            <p className="text-[12px] text-red-500 leading-relaxed">{error}</p>
+          </div>
+        )}
+
+        {error && collapsed && (
+          <div className="flex justify-center mt-2 shrink-0">
+            <div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

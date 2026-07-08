@@ -11,16 +11,24 @@ const isProtectedRoute = createRouteMatcher([
   "/profile(.*)",
   "/settings(.*)",
   "/requests(.*)",
+  "/access(.*)",
+  "/notifications(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
+  const { pathname } = req.nextUrl;
+
+  // Redirect old routes to Access Center
+  if (["/invitations", "/invitations/", "/requests", "/requests/"].includes(pathname)) {
+    return NextResponse.redirect(new URL("/access", req.url));
+  }
 
   if (isProtectedRoute(req) && !userId) {
     return NextResponse.redirect(new URL("/", req.url));
   }
 
-  if (isPublicRoute(req) && userId && req.nextUrl.pathname === "/") {
+  if (isPublicRoute(req) && userId && pathname === "/") {
     return NextResponse.redirect(new URL("/sync", req.url));
   }
 });

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Bell } from "lucide-react";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
-import { formatLastActive } from "@/lib/presence";
+import { timeAgo } from "@/lib/notificationUtils";
 import { EmptyState } from "@/components/custom/EmptyState";
 
 function NotificationItem({
@@ -39,7 +39,7 @@ function NotificationItem({
           </p>
         )}
         <p className="text-xs text-gray-400 mt-1">
-          {formatLastActive(new Date(n.createdAt).getTime())}
+          {timeAgo(n.createdAt)}
         </p>
       </div>
       {!n.read && (
@@ -53,9 +53,9 @@ interface NotificationBellProps {
   projectId?: string;
 }
 
-export default function NotificationBell({ projectId }: NotificationBellProps) {
+export default function NotificationBell({ projectId: _projectId }: NotificationBellProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
-    useNotifications(projectId);
+    useNotifications({ limit: 20 });
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 

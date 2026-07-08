@@ -3,20 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import axios from "axios";
-import { useSocket } from "./useSocket";
+import { useNotificationContext } from "@/components/notifications/notification-context";
+import type { Notification } from "@/components/notifications/notification-context";
+
+export type { Notification };
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-
-export interface Notification {
-  id: string;
-  userId: string;
-  type: string;
-  title: string;
-  message: string | null;
-  projectId: string | null;
-  read: boolean;
-  createdAt: string;
-}
 
 interface NotificationsResponse {
   items: Notification[];
@@ -26,95 +18,63 @@ interface NotificationsResponse {
   pages: number;
 }
 
-export function useNotifications(projectId?: string) {
+interface UseNotificationsOptions {
+  filter?: string;
+  search?: string;
+  type?: string;
+  page?: number;
+  limit?: number;
+}
+
+export function useNotifications(opts?: UseNotificationsOptions) {
   const { getToken } = useAuth();
-  const socket = useSocket(projectId);
+  const ctx = useNotificationContext();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [pages, setPages] = useState(0);
 
-  const getHeaders = useCallback(async () => {
+  const fetchNotifications = useCallback(async (overrideOpts?: UseNotificationsOptions) => {
     const token = await getToken();
-    return {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    };
-  }, [getToken]);
+    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+    const filter = overrideOpts?.filter ?? opts?.filter;
+    const search = overrideOpts?.search ?? opts?.search;
+    const type = overrideOpts?.type ?? opts?.type;
+    const page = overrideOpts?.page ?? opts?.page ?? 1;
+    const limit = overrideOpts?.limit ?? opts?.limit ?? 20;
 
-  const fetchNotifications = useCallback(async () => {
-    const headers = await getHeaders();
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (filter && filter !== "all") params.set("filter", filter);
+    if (search) params.set("search", search);
+    if (type) params.set("type", type);
+
     try {
       const { data } = await axios.get<NotificationsResponse>(
-        `${BASE_URL}/notifications?limit=50`,
+        `${BASE_URL}/notifications?${params}`,
         { headers },
       );
       setNotifications(data.items);
-      setUnreadCount(data.items.filter((n) => !n.read).length);
+      setTotal(data.total);
+      setPages(data.pages);
     } catch {
     } finally {
       setLoading(false);
     }
-  }, [getHeaders]);
-
-  const fetchUnreadCount = useCallback(async () => {
-    const headers = await getHeaders();
-    try {
-      const { data } = await axios.get<number>(
-        `${BASE_URL}/notifications/unread-count`,
-        { headers },
-      );
-      setUnreadCount(data);
-    } catch {}
-  }, [getHeaders]);
-
-  const markAsRead = useCallback(
-    async (id: string) => {
-      const headers = await getHeaders();
-      try {
-        await axios.patch(`${BASE_URL}/notifications/${id}/read`, {}, { headers });
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-        );
-        setUnreadCount((prev) => Math.max(0, prev - 1));
-      } catch {}
-    },
-    [getHeaders],
-  );
-
-  const markAllAsRead = useCallback(async () => {
-    const headers = await getHeaders();
-    try {
-      await axios.patch(`${BASE_URL}/notifications/read-all`, {}, { headers });
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      setUnreadCount(0);
-    } catch {}
-  }, [getHeaders]);
+  }, [getToken, opts?.filter, opts?.search, opts?.type, opts?.page, opts?.limit]);
 
   useEffect(() => {
     fetchNotifications();
-    fetchUnreadCount();
-  }, [fetchNotifications, fetchUnreadCount]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handler = (notification: Notification) => {
-      setNotifications((prev) => [notification, ...prev]);
-      setUnreadCount((prev) => prev + 1);
-    };
-
-    socket.on("notification", handler);
-    return () => {
-      socket.off("notification", handler);
-    };
-  }, [socket]);
+  }, [fetchNotifications]);
 
   return {
     notifications,
-    unreadCount,
+    unreadCount: ctx.unreadCount,
     loading,
-    markAsRead,
-    markAllAsRead,
+    total,
+    pages,
+    markAsRead: ctx.markAsRead,
+    markAllAsRead: ctx.markAllAsRead,
+    deleteNotification: ctx.deleteNotification,
     refresh: fetchNotifications,
   };
 }

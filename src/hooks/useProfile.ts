@@ -71,6 +71,7 @@ export function useProfile(userId?: string) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ownedProjects, setOwnedProjects] = useState<ProjectCard[]>([]);
   const [sharedProjects, setSharedProjects] = useState<ProjectCard[]>([]);
+  const [publicProjects, setPublicProjects] = useState<(ProjectCard & { role: string | null })[]>([]);
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const isOwnProfile = !userId || userId === currentUserId;
@@ -116,6 +117,15 @@ export function useProfile(userId?: string) {
     } catch {}
   }, [getHeaders]);
 
+  const fetchPublicProjects = useCallback(async () => {
+    if (!targetId) return;
+    const headers = await getHeaders();
+    try {
+      const { data } = await axios.get<ProjectCard[]>(`${BASE_URL}/users/${targetId}/projects`, { headers });
+      setPublicProjects(data);
+    } catch {}
+  }, [targetId, getHeaders]);
+
   const fetchActivity = useCallback(async () => {
     const headers = await getHeaders();
     try {
@@ -130,8 +140,10 @@ export function useProfile(userId?: string) {
       fetchOwnedProjects();
       fetchSharedProjects();
       fetchActivity();
+    } else {
+      fetchPublicProjects();
     }
-  }, [fetchProfile, fetchOwnedProjects, fetchSharedProjects, fetchActivity, isOwnProfile]);
+  }, [fetchProfile, fetchOwnedProjects, fetchSharedProjects, fetchActivity, fetchPublicProjects, isOwnProfile]);
 
   useEffect(() => {
     if (!socket) return;
@@ -182,6 +194,7 @@ export function useProfile(userId?: string) {
     profile,
     ownedProjects,
     sharedProjects,
+    publicProjects,
     activity,
     loading,
     isOwnProfile,

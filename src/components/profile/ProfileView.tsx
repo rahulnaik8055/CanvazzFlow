@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Edit3, FolderOpen, Clock, Users, FileText, Activity, ExternalLink, Shield } from "lucide-react";
+import { Edit3, FolderOpen, Clock, Users, FileText, Activity, ExternalLink, Shield, UserPlus, Check, Globe } from "lucide-react";
 import { useProfile, Profile, ProjectCard, Activity as ActivityType } from "@/hooks/useProfile";
+import { RequestAccessModal } from "@/components/requests/RequestAccessModal";
+import { useAuth } from "@clerk/nextjs";
 
 function getInitials(firstName?: string | null, lastName?: string | null): string {
   return [firstName, lastName].filter(Boolean).map((s) => (s as string)[0]).join("").toUpperCase().slice(0, 2);
@@ -38,8 +40,8 @@ function StatCard({ icon: Icon, label, value }: { icon: any; label: string; valu
 function ProjectCardView({ project }: { project: ProjectCard }) {
   return (
     <Link
-      href={project.role === "owner" ? `/project/${project.id}/pages` : `/project/${project.id}/pages`}
-      className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:border-gray-200 hover:shadow-sm transition-all group"
+      href={`/project/${project.id}/pages`}
+      className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:border-gray-200 hover:shadow-sm transition-all group cursor-pointer"
     >
       <div className="h-24 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
         {project.thumbnail ? (
@@ -48,7 +50,7 @@ function ProjectCardView({ project }: { project: ProjectCard }) {
           <FolderOpen size={28} className="text-gray-300" />
         )}
         <div className="absolute top-2 right-2">
-          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize ${
+          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded capitalize cursor-default ${
             project.visibility === "public" ? "bg-green-50 text-green-600" : "bg-gray-50 text-gray-500"
           }`}>
             {project.visibility}
@@ -74,6 +76,81 @@ function ProjectCardView({ project }: { project: ProjectCard }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+function PublicProjectCard({
+  project,
+  currentUserId,
+  onRequestAccess,
+}: {
+  project: ProjectCard & { role: string | null };
+  currentUserId?: string;
+  onRequestAccess: (project: ProjectCard & { role: string | null }) => void;
+}) {
+  const isMember = project.role !== null;
+  const isOwn = project.owner?.id === currentUserId;
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:border-gray-200 hover:shadow-sm transition-all group">
+      <Link
+        href={isMember ? `/project/${project.id}/pages` : "#"}
+        className="block cursor-pointer"
+        onClick={(e) => { if (!isMember) e.preventDefault(); }}
+      >
+        <div className="h-24 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
+          {project.thumbnail ? (
+            <img src={project.thumbnail} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <FolderOpen size={28} className="text-gray-300" />
+          )}
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            {project.visibility && (
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-600 cursor-default">
+                {project.visibility}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="p-3">
+          <h3 className="text-sm font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+            {project.name}
+          </h3>
+          {project.description && (
+            <p className="text-xs text-gray-400 line-clamp-1 mt-0.5">{project.description}</p>
+          )}
+          <div className="flex items-center gap-2 text-[11px] text-gray-400 mt-1.5">
+            <span className="flex items-center gap-1">
+              <Users size={10} />
+              {project.memberCount}
+            </span>
+            <span>·</span>
+            <span>{timeAgo(project.updatedAt)}</span>
+          </div>
+        </div>
+      </Link>
+
+      {!isOwn && !isMember && (
+        <div className="px-3 pb-3">
+          <button
+            onClick={() => onRequestAccess(project)}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-white bg-gray-900 hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+          >
+            <UserPlus size={12} />
+            Request Access
+          </button>
+        </div>
+      )}
+
+      {isMember && (
+        <div className="px-3 pb-3">
+          <div className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-green-600 bg-green-50 rounded-lg">
+            <Check size={12} />
+            Member
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -126,7 +203,7 @@ function ProfileHeader({ profile, isOwnProfile }: { profile: Profile; isOwnProfi
             {isOwnProfile && (
               <Link
                 href="/settings"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shrink-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors shrink-0 cursor-pointer"
               >
                 <Edit3 size={12} />
                 Edit profile
@@ -248,7 +325,7 @@ function ActivitySection({ activity }: { activity: ActivityType | null }) {
                 <Link
                   key={j.projectId}
                   href={`/project/${j.projectId}/pages`}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer"
                 >
                   <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                     <FolderOpen size={14} className="text-gray-400" />
@@ -274,7 +351,7 @@ function ActivitySection({ activity }: { activity: ActivityType | null }) {
                 <Link
                   key={v.pageId}
                   href={`/editor/${v.projectId}/page/${v.pageId}`}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors group cursor-pointer"
                 >
                   <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                     <FileText size={14} className="text-gray-400" />
@@ -324,15 +401,19 @@ interface ProfileViewProps {
 }
 
 export function ProfileView({ userId }: ProfileViewProps) {
+  const { userId: currentUserId } = useAuth();
   const {
     profile,
     ownedProjects,
     sharedProjects,
+    publicProjects,
     activity,
     loading,
     isOwnProfile,
     touchActive,
   } = useProfile(userId);
+
+  const [requestProject, setRequestProject] = useState<(ProjectCard & { role: string | null }) | null>(null);
 
   useEffect(() => {
     if (isOwnProfile) touchActive();
@@ -361,6 +442,51 @@ export function ProfileView({ userId }: ProfileViewProps) {
 
       {isOwnProfile && (
         <ProjectsSection owned={ownedProjects} shared={sharedProjects} loading={loading} />
+      )}
+
+      {!isOwnProfile && publicProjects.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Globe size={14} className="text-gray-400" />
+            Public Projects
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {publicProjects.map((p) => (
+              <PublicProjectCard
+                key={p.id}
+                project={p}
+                currentUserId={currentUserId ?? undefined}
+                onRequestAccess={setRequestProject}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!isOwnProfile && publicProjects.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center bg-white border border-gray-100 rounded-2xl">
+          <Globe size={32} className="text-gray-200 mb-3" />
+          <p className="text-sm font-medium text-gray-500">No public projects</p>
+          <p className="text-xs text-gray-400 mt-1">This user hasn&apos;t made any projects public.</p>
+        </div>
+      )}
+
+      {requestProject && currentUserId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="relative">
+            <RequestAccessModal
+              projectId={requestProject.id}
+              projectName={requestProject.name}
+              currentUserId={currentUserId}
+            />
+            <button
+              onClick={() => setRequestProject(null)}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center text-xs text-gray-500 hover:text-gray-900 shadow-sm cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
+import { useUser, useClerk } from "@clerk/nextjs";
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,26 +9,33 @@ import {
   LayoutDashboard,
   Search,
   Command,
-  Send,
   User,
   Settings,
+  Users,
+  LogOut,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { UniversalSearch } from "@/components/search/UniversalSearch";
+import { useNotificationContext } from "@/components/notifications/notification-context";
+import { useAccess } from "@/hooks/useAccess";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Projects", href: "/project", icon: FolderOpen },
-  { label: "Requests", href: "/requests", icon: Bell },
-  { label: "Invitations", href: "/invitations", icon: Send },
+  { label: "Notifications", href: "/notifications", icon: Bell },
+  { label: "Access Center", href: "/access", icon: Users },
 ];
 
 const BOTTOM_ITEMS = [
   { label: "Profile", href: "/profile", icon: User },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
+
+function getInitials(firstName?: string | null, lastName?: string | null): string {
+  return [firstName, lastName].filter(Boolean).map((s) => (s as string)[0]).join("").toUpperCase().slice(0, 2);
+}
 
 function Sidebar({
   collapsed,
@@ -39,6 +46,13 @@ function Sidebar({
 }) {
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
+  const { unreadCount } = useNotificationContext();
+  const { badgeCount } = useAccess();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+
+  const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.emailAddresses?.[0]?.emailAddress || "User";
+  const initials = getInitials(user?.firstName, user?.lastName);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -58,18 +72,28 @@ function Sidebar({
           collapsed ? "w-15" : "w-55"
         }`}
       >
-        <div
-          className={`flex items-center h-16 border-b border-gray-100 px-4 ${
-            collapsed ? "justify-center" : "gap-2"
+        {/* User profile at top */}
+        <Link
+          href="/profile"
+          className={`flex items-center h-16 border-b border-gray-100 px-3 hover:bg-gray-50 transition-colors ${
+            collapsed ? "justify-center" : "gap-2.5"
           }`}
+          title={collapsed ? name : undefined}
         >
-          <UserButton afterSwitchSessionUrl="/" />
+          <div className="w-8 h-8 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center shrink-0">
+            {user?.imageUrl ? (
+              <img src={user.imageUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xs font-semibold text-gray-500">{initials}</span>
+            )}
+          </div>
           {!collapsed && (
-            <span className="font-semibold text-gray-900 text-sm">
-              Design Tool
-            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
+              <p className="text-[10px] text-gray-400 truncate">Free plan</p>
+            </div>
           )}
-        </div>
+        </Link>
 
         <nav className="flex-1 py-4 px-2 flex flex-col gap-1">
           <button
@@ -96,6 +120,7 @@ function Sidebar({
           {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
             const isActive =
               pathname === href || (href !== "/" && pathname.startsWith(href));
+            const badge = href === "/notifications" ? unreadCount : href === "/access" ? badgeCount : 0;
             return (
               <Link
                 key={href}
@@ -108,7 +133,12 @@ function Sidebar({
                 } ${collapsed ? "justify-center" : ""}`}
               >
                 <Icon size={18} className="shrink-0" />
-                {!collapsed && <span>{label}</span>}
+                {!collapsed && <span className="flex-1">{label}</span>}
+                {badge > 0 && (
+                  <span className="text-[10px] font-medium bg-red-500 text-white px-1.5 py-0.5 rounded-full leading-none">
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -134,6 +164,19 @@ function Sidebar({
               </Link>
             );
           })}
+
+          <div className="h-px bg-gray-100 my-1" />
+
+          <button
+            onClick={() => signOut()}
+            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-gray-600 hover:bg-red-50 hover:text-red-600 ${
+              collapsed ? "justify-center" : ""
+            }`}
+            title={collapsed ? "Sign Out" : undefined}
+          >
+            <LogOut size={18} className="shrink-0" />
+            {!collapsed && <span>Sign Out</span>}
+          </button>
         </div>
 
         <button

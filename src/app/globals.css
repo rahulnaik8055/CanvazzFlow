@@ -180,4 +180,10 @@
   html {
     @apply font-sans;
     }
+  button:not(:disabled) {
+    cursor: pointer;
+    }
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+    }
 }

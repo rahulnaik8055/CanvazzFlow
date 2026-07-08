@@ -36,10 +36,10 @@ const actions = [
     hoverBg: "hover:bg-emerald-50",
   },
   {
-    label: "View Requests",
+    label: "Access Center",
     icon: ArrowRight,
-    desc: "See pending access requests",
-    href: "/requests",
+    desc: "Manage invitations and access requests",
+    href: "/access",
     color: "text-amber-600",
     bg: "bg-amber-50",
     hoverBg: "hover:bg-amber-50",

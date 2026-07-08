@@ -1,4 +1,4 @@
-# CanvasFlow
+# CanvazzFlow
 
 A real-time collaborative design canvas — multiple users editing the same board simultaneously, with live cursors, presence, shape tools, and instant sync. Think a lightweight Figma.
 

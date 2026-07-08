@@ -15,6 +15,7 @@ import { GatewayModule } from './gateway/gateway.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { InvitationsModule } from './invitations/invitations.module';
+import { AccessModule } from './access/access.module';
 import { SearchModule } from './search/search.module';
 
 @Module({
@@ -31,6 +32,7 @@ import { SearchModule } from './search/search.module';
     NotificationsModule,
     DashboardModule,
     InvitationsModule,
+    AccessModule,
     SearchModule,
   ],
   controllers: [AppController, ProjectMembersController],

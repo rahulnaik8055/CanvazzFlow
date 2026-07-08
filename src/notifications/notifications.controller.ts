@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Patch,
+  Delete,
   Param,
   Query,
   Req,
@@ -20,12 +21,17 @@ export class NotificationsController {
     @Req() req,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('filter') filter?: string,
+    @Query('search') search?: string,
+    @Query('type') type?: string,
   ) {
-    return this.svc.findByUser(
-      req['userId'],
-      page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 20,
-    );
+    return this.svc.findByUser(req['userId'], {
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 20,
+      filter,
+      search,
+      type,
+    });
   }
 
   @Get('unread-count')
@@ -41,5 +47,10 @@ export class NotificationsController {
   @Patch('read-all')
   markAllAsRead(@Req() req) {
     return this.svc.markAllAsRead(req['userId']);
+  }
+
+  @Delete(':id')
+  delete(@Req() req, @Param('id') id: string) {
+    return this.svc.delete(req['userId'], id);
   }
 }

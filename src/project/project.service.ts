@@ -296,12 +296,30 @@ export class ProjectsService {
   async deleteProject(projectId: string, userId: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
+      select: { id: true, name: true, ownerId: true },
     });
     if (!project) throw new NotFoundException('Project not found');
     if (project.ownerId !== userId)
       throw new ForbiddenException('Only the owner can delete this project');
 
-    return this.prisma.project.delete({ where: { id: projectId } });
+    const members = await this.prisma.projectMember.findMany({
+      where: { projectId, userId: { not: userId } },
+      select: { userId: true },
+    });
+
+    await this.prisma.project.delete({ where: { id: projectId } });
+
+    for (const m of members) {
+      this.notifications.create({
+        userId: m.userId,
+        type: 'project_deleted',
+        title: 'Project Deleted',
+        message: `"${project.name}" has been deleted by the owner`,
+        metadata: { projectId, projectName: project.name },
+      });
+    }
+
+    return { ok: true };
   }
 
   async renameProject(projectId: string, name: string, userId: string) {
@@ -327,10 +345,12 @@ export class ProjectsService {
       if (m.userId !== userId) {
         this.notifications.create({
           userId: m.userId,
+          actorId: userId,
           type: 'project_renamed',
           title: 'Project Renamed',
           message: `"${project.name}" was renamed to "${name}"`,
           projectId,
+          metadata: { oldName: project.name, newName: name },
         });
       }
     }
@@ -424,10 +444,12 @@ export class ProjectsService {
         const changes = Object.keys(dto).join(', ');
         this.notifications.create({
           userId: m.userId,
+          actorId: userId,
           type: 'project_updated',
           title: 'Project Updated',
           message: `Project "${project.name}" was updated (${changes})`,
           projectId,
+          metadata: { changes },
         });
       }
     }

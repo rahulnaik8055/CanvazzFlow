@@ -56,6 +56,12 @@ export class UsersController {
     return profile;
   }
 
+  @Get(':id/projects')
+  async getPublicProjects(@Req() req: Request, @Param('id') id: string) {
+    const viewerId = req['userId'];
+    return this.usersService.getPublicProjects(id, viewerId);
+  }
+
   @Patch('me')
   async updateProfile(@Req() req: Request, @Body() dto: UpdateProfileDto) {
     try {

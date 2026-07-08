@@ -187,6 +187,40 @@ export class UsersService {
     });
   }
 
+  async getPublicProjects(targetUserId: string, viewerId: string) {
+    const projects = await this.prisma.project.findMany({
+      where: {
+        ownerId: targetUserId,
+        visibility: 'public',
+      },
+      include: {
+        User: { select: { id: true, firstName: true, lastName: true, imageUrl: true } },
+        _count: { select: { members: true, pages: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    const viewerMemberships = await this.prisma.projectMember.findMany({
+      where: { userId: viewerId },
+      select: { projectId: true, role: true },
+    });
+    const membershipMap = new Map(viewerMemberships.map((m) => [m.projectId, m.role]));
+
+    return projects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      thumbnail: p.thumbnail,
+      visibility: p.visibility,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+      owner: p.User,
+      memberCount: p._count.members,
+      pagesCount: p._count.pages,
+      role: membershipMap.get(p.id) || null,
+    }));
+  }
+
   async getOwnedProjects(userId: string) {
     return this.prisma.project.findMany({
       where: { ownerId: userId },

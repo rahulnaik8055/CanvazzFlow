@@ -99,10 +99,12 @@ export class ProjectMembersService {
     });
     this.notifications.create({
       userId: targetUserId,
+      actorId: requesterId,
       type: 'role_changed',
       title: 'Role Updated',
       message: `Your role in the project has been changed to ${role}`,
       projectId,
+      metadata: { newRole: role, changedBy: requesterId },
     });
     return updated;
   }
@@ -130,10 +132,12 @@ export class ProjectMembersService {
     if (!isSelf) {
       this.notifications.create({
         userId: targetUserId,
+        actorId: requesterId,
         type: 'member_removed',
         title: 'Removed from Project',
         message: `You were removed from ${project.name || 'the project'}`,
         projectId,
+        metadata: { removedBy: requesterId },
       });
     }
     return { ok: true };

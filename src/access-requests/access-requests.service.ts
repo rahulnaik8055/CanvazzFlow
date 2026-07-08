@@ -65,10 +65,12 @@ export class AccessRequestsService {
     });
     this.notifications.create({
       userId: project.ownerId,
+      actorId: userId,
       type: 'access_request',
       title: 'New Access Request',
       message: `${requestorName} requested access to "${project.name}"`,
       projectId: project.id,
+      metadata: { requestId: request.id, requestorName },
     });
 
     return request;
@@ -130,10 +132,12 @@ export class AccessRequestsService {
     });
     this.notifications.create({
       userId: request.userId,
+      actorId: ownerId,
       type: approved ? 'access_request_approved' : 'access_request_denied',
       title: approved ? 'Access Approved' : 'Access Denied',
       message: `Your request to join "${request.project.name}" was ${approved ? 'approved' : 'denied'}`,
       projectId: request.projectId,
+      metadata: { requestId: request.id, approved },
     });
 
     return { ok: true };

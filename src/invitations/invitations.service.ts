@@ -135,6 +135,15 @@ export class InvitationsService {
         token,
         role,
       });
+      this.notifications.create({
+        userId: existingUser.id,
+        actorId: invitedById,
+        type: 'project_invitation',
+        title: 'Project Invitation',
+        message: `You've been invited to "${project.name}" as ${role}`,
+        projectId: project.id,
+        metadata: { invitationId: invitation.id, role, expiresAt: expiresAt.toISOString() },
+      });
     }
 
     return invitation;
@@ -195,6 +204,16 @@ export class InvitationsService {
       projectName: project.name,
       token,
       role,
+    });
+
+    this.notifications.create({
+      userId,
+      actorId: invitedById,
+      type: 'project_invitation',
+      title: 'Project Invitation',
+      message: `You've been invited to "${project.name}" as ${role}`,
+      projectId: project.id,
+      metadata: { invitationId: invitation.id, role, expiresAt: expiresAt.toISOString() },
     });
 
     return invitation;
@@ -326,10 +345,12 @@ export class InvitationsService {
     });
     this.notifications.create({
       userId: invitation.project.ownerId,
+      actorId: currentUserId,
       type: 'invitation_accepted',
       title: 'Invitation Accepted',
       message: `Someone accepted your invitation to "${invitation.project.name}"`,
       projectId: invitation.project.id,
+      metadata: { invitationId: invitation.id },
     });
 
     return { ok: true, projectId: invitation.projectId, projectName: invitation.project.name };
@@ -362,10 +383,12 @@ export class InvitationsService {
     });
     this.notifications.create({
       userId: invitation.project.ownerId,
+      actorId: currentUserId,
       type: 'invitation_declined',
       title: 'Invitation Declined',
       message: `Someone declined your invitation to "${invitation.project.name}"`,
       projectId: invitation.project.id,
+      metadata: { invitationId: invitation.id },
     });
 
     return { ok: true };

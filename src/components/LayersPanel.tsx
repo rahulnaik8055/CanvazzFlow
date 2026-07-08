@@ -124,9 +124,19 @@ export default function LayersPanel({
         );
       } else {
         setSelectedIds([id]);
+        if (canEdit) {
+          const maxZ = nodes.length > 0 ? Math.max(...nodes.map((n) => n.zIndex)) : 0;
+          setNodes((prev) => {
+            const updated = prev.map((n) =>
+              n.id === id ? { ...n, zIndex: maxZ + 1 } : n,
+            );
+            saveToHistory(updated);
+            return updated;
+          });
+        }
       }
     },
-    [setSelectedIds],
+    [setSelectedIds, canEdit, nodes, setNodes, saveToHistory],
   );
 
   const handleStartRename = useCallback(

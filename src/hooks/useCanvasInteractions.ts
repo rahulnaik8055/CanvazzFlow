@@ -146,6 +146,11 @@ export const useCanvasInteractions = (
               n.type === "circle"
                 ? Math.max(MIN_SIZE / 2, n.radius * scaleX)
                 : n.radius;
+            const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
+            const newFontSize =
+              n.type === "text"
+                ? Math.max(8, Math.round((n.fontSize || 20) * avgScale))
+                : n.fontSize;
 
             return {
               ...n,
@@ -153,6 +158,7 @@ export const useCanvasInteractions = (
               y: e.target.y(),
               width: newWidth,
               height: newHeight,
+              fontSize: newFontSize,
               radius: newRadius,
               rotation: e.target.rotation(),
             };

@@ -145,6 +145,23 @@ export default function InspectorPanel({
         )}
       </div>
 
+      {/* Text content (text-based nodes only, at top) */}
+      {isText && (
+        <div className="px-3 pt-2 pb-1">
+          <label className="block text-[10px] text-gray-400 mb-0.5 font-medium">Content</label>
+          <textarea
+            value={selectedNode.text || ""}
+            disabled={disabled}
+            onChange={(e) =>
+              updateNodeProperty(selectedNode.id, "text", e.target.value)
+            }
+            rows={3}
+            className={`${inputCls} resize-none font-sans`}
+            placeholder="Type here..."
+          />
+        </div>
+      )}
+
       {/* Section: Position */}
       <Section label="Position">
         <div className="grid grid-cols-2 gap-2">
@@ -339,19 +356,6 @@ export default function InspectorPanel({
       {/* Section: Typography (text-based nodes) */}
       {isText && (
         <Section label="Typography">
-          <div>
-            <label className="block text-[10px] text-gray-400 mb-0.5 font-medium">Content</label>
-            <textarea
-              value={selectedNode.text || ""}
-              disabled={disabled}
-              onChange={(e) =>
-                updateNodeProperty(selectedNode.id, "text", e.target.value)
-              }
-              rows={3}
-              className={`${inputCls} resize-none font-sans`}
-              placeholder="Type here..."
-            />
-          </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[10px] text-gray-400 mb-0.5 font-medium">Font</label>

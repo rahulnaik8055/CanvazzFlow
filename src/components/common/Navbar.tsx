@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   Search,
   Command,
-  User,
   Settings,
   Users,
   LogOut,
@@ -29,7 +28,6 @@ const NAV_ITEMS = [
 ];
 
 const BOTTOM_ITEMS = [
-  { label: "Profile", href: "/profile", icon: User },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -51,7 +49,7 @@ function Sidebar({
   const { user } = useUser();
   const { signOut } = useClerk();
 
-  const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.emailAddresses?.[0]?.emailAddress || "User";
+  const name = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
   const initials = getInitials(user?.firstName, user?.lastName);
 
   useEffect(() => {
@@ -90,7 +88,6 @@ function Sidebar({
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
-              <p className="text-[10px] text-gray-400 truncate">Free plan</p>
             </div>
           )}
         </Link>

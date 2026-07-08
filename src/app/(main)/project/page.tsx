@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useApi } from "@/lib/api";
+import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Search, Filter, Star, Archive, Plus } from "lucide-react";
@@ -53,6 +54,7 @@ export default function ProjectsPage() {
   const [renameTarget, setRenameTarget] = useState<IProject | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [inviteProjectId, setInviteProjectId] = useState<string | null>(null);
+  const { user } = useUser();
   const debouncedSearch = useDebounce(search, 300);
 
   const fetchProjects = useCallback(async () => {
@@ -155,6 +157,18 @@ export default function ProjectsPage() {
     setInviteProjectId(project.id);
   }, []);
 
+  const handleLeave = useCallback(async (project: IProject) => {
+    if (!window.confirm(`Leave "${project.name}"? You will lose access to all its content.`)) return;
+    if (!user?.id) return;
+    try {
+      await apiRef.current.delete(`projects/${project.id}/members/${user.id}`);
+      toast.success("Left project");
+      fetchProjects();
+    } catch {
+      toast.error("Failed to leave project");
+    }
+  }, [user?.id, fetchProjects]);
+
   const handleDuplicate = useCallback(async (project: IProject) => {
     try {
       await apiRef.current.post("project", {
@@ -243,6 +257,7 @@ export default function ProjectsPage() {
                 onTogglePin={handleTogglePin}
                 onSettings={handleSettings}
                 onInvite={handleInvite}
+                onLeave={handleLeave}
               />
             ))}
           </div>

@@ -234,7 +234,7 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
     }
   }, [projectId]);
 
-  const userName = user?.fullName || user?.emailAddresses?.[0]?.emailAddress || "Anonymous";
+  const userName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
   const userAvatar = user?.imageUrl || "";
   const userColor = getUserColor(user?.id || projectId);
 
@@ -694,6 +694,14 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
       transformerRef.current.getLayer()?.batchDraw();
     }
   }, [selectedIds, nodes, effectiveTool]);
+
+  if (status !== "connected") {
+    return (
+      <div className="flex h-screen w-screen overflow-hidden bg-gray-50 font-sans items-center justify-center">
+        <LoadingOverlay isLoading />
+      </div>
+    );
+  }
 
   const selectedNode = selectedIds.length === 1
     ? nodes.find((n) => n.id === selectedIds[0]) || null

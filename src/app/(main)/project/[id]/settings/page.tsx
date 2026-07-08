@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { useApi } from "@/lib/api";
 import { useSocket } from "@/hooks/useSocket";
 import { toast } from "sonner";
-import { ArrowLeft, Globe, Lock, Check, X, Trash2, Shield, Users, Archive, ChevronDown, UserCog, UserPlus } from "lucide-react";
+import { ArrowLeft, Globe, Lock, Check, X, Trash2, Shield, Users, Archive, ChevronDown, UserCog, UserPlus, LogOut } from "lucide-react";
 import { EmptyState } from "@/components/custom/EmptyState";
 import { InviteDialog } from "@/components/invitations/InviteDialog";
 
@@ -39,6 +40,7 @@ export default function SettingsPage() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const { user } = useUser();
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -142,6 +144,18 @@ export default function SettingsPage() {
       router.push("/project");
     } catch {
       toast.error("Failed to delete project");
+    }
+  };
+
+  const handleLeaveProject = async () => {
+    if (!window.confirm("Leave this project? You will lose access to all its content.")) return;
+    if (!user?.id) return;
+    try {
+      await apiRef.current.delete(`projects/${projectId}/members/${user.id}`);
+      toast.success("Left project");
+      router.push("/project");
+    } catch {
+      toast.error("Failed to leave project");
     }
   };
 
@@ -431,8 +445,18 @@ export default function SettingsPage() {
           )}
 
           {!isOwner && (
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-500">Only project owners can access the danger zone.</p>
+            <div className="flex items-center justify-between p-4 border border-red-200 rounded-lg">
+              <div>
+                <div className="text-sm font-medium text-red-600">Leave Project</div>
+                <div className="text-xs text-red-400">Remove yourself from this project</div>
+              </div>
+              <button
+                onClick={handleLeaveProject}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Leave
+              </button>
             </div>
           )}
         </div>

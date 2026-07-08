@@ -181,9 +181,6 @@ function ProfileHeader({ profile, isOwnProfile }: { profile: Profile; isOwnProfi
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-xl font-bold text-gray-900 truncate">{name}</h1>
-              {profile.username && (
-                <p className="text-sm text-gray-400">@{profile.username}</p>
-              )}
               <div className="flex items-center gap-2 text-xs text-gray-400 mt-1.5">
                 <span className="flex items-center gap-1">
                   <Clock size={11} />

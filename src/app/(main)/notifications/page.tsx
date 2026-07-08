@@ -150,7 +150,10 @@ export default function NotificationsPage() {
               }`}
               onClick={() => {
                 if (!n.read) markAsRead(n.id);
-                if (n.projectId) {
+                const accessTypes = ["access_request", "access_request_approved", "access_request_denied", "project_invitation", "invitation_accepted", "invitation_declined"];
+                if (accessTypes.includes(n.type)) {
+                  router.push("/access");
+                } else if (n.projectId) {
                   router.push(`/project/${n.projectId}/pages`);
                 }
               }}
@@ -178,7 +181,9 @@ export default function NotificationsPage() {
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className="text-[10px] text-gray-400">{timeAgo(n.createdAt)}</span>
                   {n.projectId && (
-                    <span className="text-[10px] text-blue-500 font-medium">View project</span>
+                    <span className="text-[10px] text-blue-500 font-medium">
+                      {["access_request", "access_request_approved", "access_request_denied", "project_invitation", "invitation_accepted", "invitation_declined"].includes(n.type) ? "View in Access Center" : "View project"}
+                    </span>
                   )}
                 </div>
               </div>

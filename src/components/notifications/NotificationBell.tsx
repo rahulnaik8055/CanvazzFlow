@@ -63,7 +63,10 @@ export default function NotificationBell() {
                   onClick={() => {
                     if (!n.read) markAsRead(n.id);
                     setOpen(false);
-                    if (n.projectId) {
+                    const accessTypes = ["access_request", "access_request_approved", "access_request_denied", "project_invitation", "invitation_accepted", "invitation_declined"];
+                    if (accessTypes.includes(n.type)) {
+                      router.push("/access");
+                    } else if (n.projectId) {
                       router.push(`/project/${n.projectId}/pages`);
                     } else {
                       router.push("/notifications");

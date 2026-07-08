@@ -17,6 +17,7 @@ import {
   Heart,
   Archive,
   Pin,
+  LogOut,
   Settings as SettingsIcon,
   UserPlus,
 } from "lucide-react";
@@ -66,6 +67,7 @@ interface ProjectCardProps {
   onTogglePin?: (project: IProject) => void;
   onSettings?: (project: IProject) => void;
   onInvite?: (project: IProject) => void;
+  onLeave?: (project: IProject) => void;
 }
 
 function timeAgo(date: string) {
@@ -134,6 +136,7 @@ export function ProjectCard({
   onTogglePin,
   onSettings,
   onInvite,
+  onLeave,
 }: ProjectCardProps) {
   const [favorite, setFavorite] = useState(project.isFavorited ?? false);
 
@@ -164,6 +167,7 @@ export function ProjectCard({
     { label: "Duplicate", icon: <Copy size={12} />, onClick: () => onDuplicate?.(project) },
     ...(isOwner ? [{ label: "Settings", icon: <SettingsIcon size={12} />, onClick: () => onSettings?.(project) }] : []),
     ...(isOwner ? [{ label: "Delete", icon: <Trash2 size={12} />, danger: true, onClick: () => onDelete?.(project) }] : []),
+    ...(!isOwner ? [{ label: "Leave Project", icon: <LogOut size={12} />, danger: true, onClick: () => onLeave?.(project) }] : []),
   ];
 
   return (
@@ -285,14 +289,26 @@ export function ProjectCard({
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onInvite?.(project); }}
-              className="mt-2 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-            >
-              <UserPlus size={12} />
-              Invite
-            </button>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onInvite?.(project); }}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-gray-500 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              >
+                <UserPlus size={12} />
+                Invite
+              </button>
+              {!isOwner && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onLeave?.(project); }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+                  title="Leave project"
+                >
+                  <LogOut size={12} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

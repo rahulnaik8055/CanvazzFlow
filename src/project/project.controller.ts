@@ -46,6 +46,11 @@ export class ProjectsController {
     return this.projectsService.searchProjects(req['userId'], query);
   }
 
+  @Get('public/:id')
+  getPublicProject(@Param('id') id: string, @Req() req: Request) {
+    return this.projectsService.getPublicProject(id, req['userId']);
+  }
+
   @Get(':id')
   @UseGuards(ProjectRoleGuard)
   @ProjectRoles('viewer', 'editor', 'owner')

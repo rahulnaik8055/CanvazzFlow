@@ -7,146 +7,160 @@ export class SearchService {
 
   async search(userId: string, q: string) {
     if (!q || q.trim().length < 1) {
-      return { projects: [], pages: [], members: [], requests: [] };
+      return { projects: [], users: [] };
     }
 
     const query = q.trim();
     const words = query.split(/\s+/).filter(Boolean);
-    const like = `%${query}%`;
 
-    const [projects, pages, members, requests] = await Promise.all([
-      this.searchProjects(userId, query, words, like),
-      this.searchPages(userId, query, like),
-      this.searchMembers(userId, query, like),
-      this.searchRequests(userId, query, like),
+    const [projects, users] = await Promise.all([
+      this.searchProjects(userId, query, words),
+      this.searchUsers(userId, query),
     ]);
 
-    return { projects, pages, members, requests };
+    return { projects, users };
   }
 
-  private async searchProjects(userId: string, query: string, words: string[], like: string) {
-    const projects = await this.prisma.project.findMany({
-      where: {
-        OR: [
-          { ownerId: userId },
-          { members: { some: { userId } } },
-        ],
-        AND: words.map((w) => ({
-          OR: [
-            { name: { contains: w, mode: 'insensitive' as const } },
-            { description: { contains: w, mode: 'insensitive' as const } },
-          ],
-        })),
-      },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        thumbnail: true,
-        visibility: true,
-        ownerId: true,
-        createdAt: true,
-      },
-      take: 8,
-    });
-
-    return this.rank(projects, query, ['name', 'description']);
-  }
-
-  private async searchPages(userId: string, query: string, like: string) {
-    const pages = await this.prisma.page.findMany({
-      where: {
-        project: {
+  private async searchProjects(userId: string, query: string, words: string[]) {
+    const [myProjects, publicProjects] = await Promise.all([
+      // User's own + member projects
+      this.prisma.project.findMany({
+        where: {
           OR: [
             { ownerId: userId },
             { members: { some: { userId } } },
           ],
+          AND: words.map((w) => ({
+            OR: [
+              { name: { contains: w, mode: 'insensitive' as const } },
+              { description: { contains: w, mode: 'insensitive' as const } },
+              { User: { firstName: { contains: w, mode: 'insensitive' as const } } },
+              { User: { lastName: { contains: w, mode: 'insensitive' as const } } },
+            ],
+          })),
         },
-        name: { contains: query, mode: 'insensitive' as const },
-      },
-      select: {
-        id: true,
-        name: true,
-        projectId: true,
-        project: { select: { id: true, name: true } },
-      },
-      take: 8,
-    });
-
-    return this.rank(pages, query, ['name']);
-  }
-
-  private async searchMembers(userId: string, query: string, like: string) {
-    const memberRecords = await this.prisma.projectMember.findMany({
-      where: {
-        project: {
-          OR: [
+        include: {
+          User: { select: { id: true, firstName: true, lastName: true, imageUrl: true } },
+          _count: { select: { members: true } },
+          members: {
+            where: { userId },
+            select: { role: true },
+            take: 1,
+          },
+        },
+        take: 8,
+      }),
+      // Public projects from all users (excluding ones already covered above)
+      this.prisma.project.findMany({
+        where: {
+          visibility: 'public',
+          NOT: [
             { ownerId: userId },
             { members: { some: { userId } } },
           ],
+          AND: words.map((w) => ({
+            OR: [
+              { name: { contains: w, mode: 'insensitive' as const } },
+              { description: { contains: w, mode: 'insensitive' as const } },
+              { User: { firstName: { contains: w, mode: 'insensitive' as const } } },
+              { User: { lastName: { contains: w, mode: 'insensitive' as const } } },
+            ],
+          })),
         },
-        user: {
-          OR: [
-            { firstName: { contains: query, mode: 'insensitive' as const } },
-            { lastName: { contains: query, mode: 'insensitive' as const } },
-            { email: { contains: query, mode: 'insensitive' as const } },
-          ],
+        include: {
+          User: { select: { id: true, firstName: true, lastName: true, imageUrl: true } },
+          _count: { select: { members: true } },
+          members: false,
         },
-      },
-      select: {
-        id: true,
-        role: true,
-        userId: true,
-        projectId: true,
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            imageUrl: true,
-          },
-        },
-        project: { select: { id: true, name: true } },
-      },
-      take: 8,
+        take: 8,
+      }),
+    ]);
+
+    const seen = new Set<string>();
+    const all = [...myProjects, ...publicProjects].filter((p) => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    }).map((p) => {
+      const myMembership = (p as any).members?.[0];
+      return {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        thumbnail: p.thumbnail,
+        visibility: p.visibility,
+        ownerId: p.ownerId,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        owner: p.User,
+        memberCount: p._count.members,
+        myRole: myMembership?.role ?? null,
+      };
     });
 
-    return this.deduplicateMembers(memberRecords, query);
+    const ranked = this.rank(all, query, ['name', 'description']);
+    return ranked.slice(0, 8);
   }
 
-  private async searchRequests(userId: string, query: string, like: string) {
-    const requests = await this.prisma.accessRequest.findMany({
+  private async searchUsers(userId: string, query: string) {
+    const users = await this.prisma.user.findMany({
       where: {
-        project: { ownerId: userId },
+        id: { not: userId },
         OR: [
-          { user: { firstName: { contains: query, mode: 'insensitive' as const } } },
-          { user: { lastName: { contains: query, mode: 'insensitive' as const } } },
-          { user: { email: { contains: query, mode: 'insensitive' as const } } },
-          { project: { name: { contains: query, mode: 'insensitive' as const } } },
-          { message: { contains: query, mode: 'insensitive' as const } },
+          { firstName: { contains: query, mode: 'insensitive' as const } },
+          { lastName: { contains: query, mode: 'insensitive' as const } },
+          { email: { contains: query, mode: 'insensitive' as const } },
         ],
       },
       select: {
         id: true,
-        status: true,
-        message: true,
-        createdAt: true,
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            imageUrl: true,
-          },
-        },
-        project: { select: { id: true, name: true } },
+        firstName: true,
+        lastName: true,
+        email: true,
+        imageUrl: true,
       },
       take: 8,
     });
 
-    return this.rank(requests, query, ['message', 'user.email', 'project.name']);
+    const myProjectIds = await this.prisma.projectMember
+      .findMany({
+        where: { userId },
+        select: { projectId: true },
+      })
+      .then((ms) => ms.map((m) => m.projectId));
+
+    const results = await Promise.all(
+      users.map(async (user) => {
+        const [mutualCount, isCollaborator] = await Promise.all([
+          this.prisma.projectMember.count({
+            where: {
+              userId: user.id,
+              projectId: { in: myProjectIds },
+            },
+          }),
+          this.prisma.projectMember
+            .findFirst({
+              where: {
+                userId: user.id,
+                project: { ownerId: userId },
+              },
+            })
+            .then((m) => !!m),
+        ]);
+
+        return {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          imageUrl: user.imageUrl,
+          mutualProjectsCount: mutualCount,
+          isCollaborator,
+        };
+      }),
+    );
+
+    return this.rank(results, query, ['firstName', 'lastName', 'email']);
   }
 
   private rank<T extends Record<string, any>>(items: T[], query: string, fields: string[]): T[] {
@@ -171,15 +185,5 @@ export class SearchService {
 
   private resolveField(obj: any, path: string): string | null {
     return path.split('.').reduce((acc, key) => (acc ? acc[key] ?? null : null), obj);
-  }
-
-  private deduplicateMembers(members: any[], query: string) {
-    const seen = new Set<string>();
-    const ranked = this.rank(members, query, ['user.firstName', 'user.lastName', 'user.email']);
-    return ranked.filter((m) => {
-      if (seen.has(m.userId)) return false;
-      seen.add(m.userId);
-      return true;
-    });
   }
 }

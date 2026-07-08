@@ -64,4 +64,16 @@ export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(sid).emit(event, payload);
     }
   }
+
+  broadcastToAll(event: string, payload: unknown) {
+    this.server.emit(event, payload);
+  }
+
+  broadcastToCollaborators(userId: string, event: string, payload: unknown) {
+    const sockets = this.userSockets.get(userId);
+    if (!sockets) return;
+    for (const sid of sockets) {
+      this.server.to(sid).emit(event, payload);
+    }
+  }
 }

@@ -15,6 +15,13 @@ model User {
   firstName           String?
   imageUrl            String?
   lastName            String?
+  displayName         String?
+  username            String?              @unique
+  bio                 String?
+  lastActiveAt        DateTime?
+  isOnline            Boolean              @default(false)
+  profileVisibility   ProfileVisibility    @default(public)
+  showEmail           Boolean              @default(false)
   accessRequests      AccessRequest[]
   accessRequestEvents AccessRequestEvent[]
   projects            Project[]
@@ -228,8 +235,14 @@ enum MemberRole {
 enum InvitationStatus {
   pending
   accepted
+  declined
   cancelled
   expired
+}
+
+enum ProfileVisibility {
+  public
+  private
 }
 
 enum RequestStatus {

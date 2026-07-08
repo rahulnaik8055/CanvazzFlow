@@ -338,6 +338,57 @@ export class ProjectsService {
     return updated;
   }
 
+  async getPublicProject(projectId: string, userId?: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        User: { select: { id: true, firstName: true, lastName: true, imageUrl: true } },
+        _count: { select: { members: true, pages: true } },
+      },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+
+    const response: any = {
+      id: project.id,
+      name: project.name,
+      description: project.description,
+      thumbnail: project.thumbnail,
+      visibility: project.visibility,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+      owner: project.User,
+      memberCount: project._count.members,
+      pagesCount: project._count.pages,
+      isMember: false,
+      hasPendingRequest: false,
+      hasPendingInvitation: false,
+    };
+
+    if (userId) {
+      const [membership, pendingRequest, pendingInvitation] = await Promise.all([
+        this.prisma.projectMember.findUnique({
+          where: { projectId_userId: { projectId, userId } },
+        }),
+        this.prisma.accessRequest.findUnique({
+          where: { projectId_userId: { projectId, userId } },
+          select: { id: true, status: true },
+        }),
+        this.prisma.projectInvitation.findFirst({
+          where: { projectId, userId, status: 'pending' },
+          select: { id: true },
+        }),
+      ]);
+
+      response.isMember = !!membership;
+      response.myRole = membership?.role || null;
+      response.hasPendingRequest = pendingRequest?.status === 'pending' || false;
+      response.pendingRequestId = pendingRequest?.id || null;
+      response.hasPendingInvitation = !!pendingInvitation;
+    }
+
+    return response;
+  }
+
   async isMember(projectId: string, userId: string): Promise<boolean> {
     const membership = await this.prisma.projectMember.findUnique({
       where: { projectId_userId: { projectId, userId } },

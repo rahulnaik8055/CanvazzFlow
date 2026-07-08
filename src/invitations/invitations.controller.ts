@@ -1,7 +1,5 @@
 import { Controller, Post, Get, Param, Body, Req, UseGuards, Query } from '@nestjs/common';
 import { ClerkAuthGuard } from 'src/auth/clerk.guard';
-import { ProjectRoleGuard } from '../common/guards/project-role.guard';
-import { ProjectRoles } from '../common/decorators/project-role.decorator';
 import { InvitationsService } from './invitations.service';
 
 class InviteByEmailDto {
@@ -29,6 +27,11 @@ class GenerateLinkDto {
 export class InvitationsController {
   constructor(private svc: InvitationsService) {}
 
+  @Get('users/search')
+  searchUsers(@Req() req, @Query('q') q: string, @Query('projectId') projectId?: string) {
+    return this.svc.searchUsers(q || '', req['userId'], projectId);
+  }
+
   @Post('projects/:projectId/invite/email')
   inviteByEmail(@Param('projectId') projectId: string, @Req() req, @Body() body: InviteByEmailDto) {
     return this.svc.inviteByEmail(projectId, req['userId'], body.email, body.role || 'editor', body.message, body.expiresInHours);
@@ -50,13 +53,18 @@ export class InvitationsController {
   }
 
   @Get('invitations/:token')
-  getByToken(@Param('token') token: string) {
-    return this.svc.getByToken(token);
+  getByToken(@Param('token') token: string, @Req() req) {
+    return this.svc.getByToken(token, req['userId']);
   }
 
   @Post('invitations/:token/accept')
   accept(@Param('token') token: string, @Req() req) {
     return this.svc.accept(token, req['userId']);
+  }
+
+  @Post('invitations/:token/decline')
+  decline(@Param('token') token: string, @Req() req) {
+    return this.svc.decline(token, req['userId']);
   }
 
   @Post('invitations/:id/cancel')
@@ -72,5 +80,10 @@ export class InvitationsController {
   @Get('me/invitations')
   myInvitations(@Req() req) {
     return this.svc.listMyPending(req['userId']);
+  }
+
+  @Get('me/invitations/sent')
+  sentInvitations(@Req() req) {
+    return this.svc.listSentInvitations(req['userId']);
   }
 }

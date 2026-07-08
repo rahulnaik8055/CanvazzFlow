@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Move,
   MousePointer,
@@ -19,9 +19,13 @@ import {
   Users,
   ChevronDown,
   X,
+  LogOut,
 } from "lucide-react";
 import CollaboratorAvatars from "./CollaboratorAvatars";
 import NotificationBell from "./NotificationBell";
+import { useSocket } from "@/hooks/useSocket";
+import { useApi } from "@/lib/api";
+import { toast } from "sonner";
 
 type Role = "owner" | "editor" | "viewer";
 
@@ -51,6 +55,41 @@ interface MemberUser {
   role: string;
 }
 
+interface PendingRequest {
+  requestId: string;
+  projectId: string;
+  userId: string;
+  userName: string;
+  userImage?: string;
+  message?: string;
+}
+
+interface ApiAccessRequest {
+  id: string;
+  projectId: string;
+  userId: string;
+  message?: string;
+  user: {
+    firstName?: string;
+    lastName?: string;
+    email: string;
+    imageUrl?: string;
+  };
+}
+
+function toRequest(r: ApiAccessRequest): PendingRequest {
+  return {
+    requestId: r.id,
+    projectId: r.projectId,
+    userId: r.userId,
+    userName:
+      [r.user.firstName, r.user.lastName].filter(Boolean).join(" ") ||
+      r.user.email,
+    userImage: r.user.imageUrl,
+    message: r.message,
+  };
+}
+
 interface TopToolbarProps {
   tool: "select" | "pan";
   setTool: (tool: "select" | "pan") => void;
@@ -66,6 +105,7 @@ interface TopToolbarProps {
   canEdit: boolean;
   alignment: AlignmentHandlers;
   projectId?: string;
+  projectName?: string;
   others?: Array<{
     connectionId: number;
     presence: {
@@ -87,6 +127,8 @@ interface TopToolbarProps {
   members?: MemberUser[];
   onRoleChange?: (userId: string, role: string) => void;
   onRemoveMember?: (userId: string) => void;
+  currentUserId?: string;
+  onLeaveProject?: () => void;
 }
 
 export default function TopToolbar({
@@ -104,11 +146,14 @@ export default function TopToolbar({
   canEdit,
   alignment,
   projectId,
+  projectName,
   others,
   currentUser,
   members,
   onRoleChange,
   onRemoveMember,
+  currentUserId,
+  onLeaveProject,
 }: TopToolbarProps) {
   const isLive = saveIndicator === "Live";
 
@@ -121,6 +166,9 @@ export default function TopToolbar({
 
   const [membersOpen, setMembersOpen] = useState(false);
   const membersRef = useRef<HTMLDivElement>(null);
+  const socket = useSocket();
+  const api = useApi();
+  const [accessRequests, setAccessRequests] = useState<PendingRequest[]>([]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -131,6 +179,45 @@ export default function TopToolbar({
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  useEffect(() => {
+    if (role !== "owner" || !projectId) return;
+    api
+      .get(`access-requests/project/${projectId}/pending`)
+      .then((data: ApiAccessRequest[]) => setAccessRequests(data.map(toRequest)))
+      .catch(() => {});
+  }, [projectId, role]);
+
+  useEffect(() => {
+    if (!socket || role !== "owner") return;
+    function onRequest(req: PendingRequest) {
+      if (req.projectId !== projectId) return;
+      setAccessRequests((prev) => {
+        if (prev.some((r) => r.requestId === req.requestId)) return prev;
+        return [req, ...prev];
+      });
+    }
+    socket.on("access-request", onRequest);
+    return () => {
+      socket.off("access-request", onRequest);
+    };
+  }, [socket, projectId, role]);
+
+  const respondToRequest = useCallback(async (requestId: string, approved: boolean) => {
+    const target = accessRequests.find((r) => r.requestId === requestId);
+    setAccessRequests((prev) => prev.filter((r) => r.requestId !== requestId));
+    try {
+      await api.patch(`access-requests/${requestId}/respond`, { approved });
+      toast.success(
+        approved
+          ? `Approved access for ${target?.userName ?? "user"}`
+          : `Denied access for ${target?.userName ?? "user"}`
+      );
+    } catch {
+      toast.error("Failed to update access request");
+      if (target) setAccessRequests((prev) => [target, ...prev]);
+    }
+  }, [accessRequests]);
 
   return (
     <div className="absolute top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm px-3 z-20 flex items-center justify-between h-14">
@@ -143,7 +230,7 @@ export default function TopToolbar({
           <ArrowLeft size={16} />
         </button>
 
-        <h1 className="text-sm font-semibold text-gray-900">Canvas editor</h1>
+        <h1 className="text-sm font-semibold text-gray-900 max-w-[200px] truncate">{projectName || "Untitled"}</h1>
 
         <span
           className={`text-xs font-medium px-2 py-0.5 rounded-md border capitalize ${ROLE_STYLES[role]}`}
@@ -265,24 +352,70 @@ export default function TopToolbar({
           </button>
         </div>
 
-        {/* Members dropdown (owner only) */}
-        {role === "owner" && members && members.length > 0 && (
+        {/* Members dropdown */}
+        {members && members.length > 0 && (
           <>
             <div className="w-px h-5 bg-gray-200" />
             <div className="relative" ref={membersRef}>
               <button
                 onClick={() => setMembersOpen(!membersOpen)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors relative ${
                   membersOpen ? "bg-gray-100 text-gray-900" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
               >
                 <Users size={14} />
                 Members
+                {role === "owner" && accessRequests.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                    {accessRequests.length}
+                  </span>
+                )}
                 <ChevronDown size={12} />
               </button>
               {membersOpen && (
-                <div className="absolute top-full mt-1 right-0 w-72 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden z-30">
-                  <div className="max-h-80 overflow-y-auto py-1">
+                <div className="absolute top-full mt-1 right-0 w-80 bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden z-30">
+                  <div className="max-h-96 overflow-y-auto py-1">
+                    {/* Pending access requests (owner only) */}
+                    {role === "owner" && accessRequests.length > 0 && (
+                      <>
+                        <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Pending requests</div>
+                        {accessRequests.map((req) => (
+                          <div key={req.requestId} className="flex items-start gap-3 px-3 py-2.5">
+                            <div className="w-7 h-7 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center shrink-0 mt-0.5">
+                              {req.userImage ? (
+                                <img src={req.userImage} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-[9px] font-semibold text-gray-500">{req.userName[0]?.toUpperCase()}</span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-medium text-gray-900 truncate">{req.userName}</div>
+                              <div className="text-[10px] text-gray-400">{req.message ? `"${req.message}"` : "wants to join"}</div>
+                            </div>
+                            <div className="flex gap-1 shrink-0">
+                              <button
+                                onClick={() => respondToRequest(req.requestId, false)}
+                                className="px-2 py-1 text-[10px] text-gray-500 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                              >
+                                Deny
+                              </button>
+                              <button
+                                onClick={() => respondToRequest(req.requestId, true)}
+                                className="px-2 py-1 text-[10px] font-medium text-white bg-gray-900 rounded-md hover:bg-gray-700 transition-colors"
+                              >
+                                Approve
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="border-t border-gray-100 my-1" />
+                      </>
+                    )}
+
+                    {/* Members list */}
+                    {role === "owner" && accessRequests.length > 0 && (
+                      <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Members</div>
+                    )}
                     {members.map((m, idx) => {
                       const initials = [m.firstName, m.lastName].filter(Boolean).map((s) => (s as string)[0]).join("").toUpperCase().slice(0, 2);
                       const name = [m.firstName, m.lastName].filter(Boolean).join(" ") || m.email;
@@ -302,7 +435,7 @@ export default function TopToolbar({
                           </div>
                           {isOwner ? (
                             <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-700 capitalize shrink-0">Owner</span>
-                          ) : (
+                          ) : role === "owner" ? (
                             <>
                               <select
                                 value={m.role}
@@ -320,10 +453,24 @@ export default function TopToolbar({
                                 <X size={12} />
                               </button>
                             </>
-                          )}
+                          ) : null}
                         </div>
                       );
                     })}
+
+                    {/* Leave project (non-owner) */}
+                    {role !== "owner" && onLeaveProject && (
+                      <>
+                        <div className="border-t border-gray-100 my-1" />
+                        <button
+                          onClick={onLeaveProject}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 text-xs text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut size={13} />
+                          Leave project
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

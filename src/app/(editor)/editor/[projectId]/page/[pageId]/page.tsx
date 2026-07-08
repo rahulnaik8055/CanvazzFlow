@@ -33,7 +33,6 @@ import LeftSidebar from "@/components/LeftSidebar";
 import TopToolbar from "@/components/TopToolbar";
 import CollaboratorCursors from "@/components/editor/CollaboratorCursors";
 import { RequestAccessModal } from "@/components/requests/RequestAccessModal";
-import { AccessRequestBanner } from "@/components/common/AccessRequestBanner";
 import { setAuthToken } from "@/liveblocks.config";
 
 type Role = "owner" | "editor" | "viewer";
@@ -154,7 +153,7 @@ export default function EditorPage() {
         nodes: new LiveMap(initialNodes!.map((n) => [n.id, n])),
       }}
     >
-      <Editor projectId={projectId} pageId={pageId} role={role!} canEdit={role !== "viewer"} />
+      <Editor projectId={projectId} pageId={pageId} role={role!} canEdit={role !== "viewer"} projectName={projectName} userId={userId!} />
     </RoomProvider>
   );
 }
@@ -202,9 +201,11 @@ interface EditorProps {
   pageId: string;
   role: Role;
   canEdit: boolean;
+  projectName: string;
+  userId: string;
 }
 
-function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
+function Editor({ projectId, pageId, role, canEdit, projectName, userId }: EditorProps) {
   const router = useRouter();
   const { user } = useUser();
   const api = useApi();
@@ -212,12 +213,11 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
   const [members, setMembers] = useState<Array<{ id: string; firstName: string | null; lastName: string | null; email: string; imageUrl: string | null; role: string }>>([]);
 
   useEffect(() => {
-    if (role !== "owner") return;
     api.get(`projects/${projectId}/members`).then((data: any[]) => {
       const unique = Array.from(new Map(data.map((m: any) => [m.id, m])).values());
       setMembers(unique as any[]);
     }).catch(() => {});
-  }, [projectId, role]);
+  }, [projectId]);
 
   const handleRoleChange = useCallback(async (userId: string, newRole: string) => {
     try {
@@ -238,6 +238,18 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
       toast.error("Failed to remove member");
     }
   }, [projectId]);
+
+  const handleLeaveProject = useCallback(async () => {
+    if (!window.confirm(`Leave "${projectName}"? You will lose access to all its content.`)) return;
+    if (!userId) return;
+    try {
+      await api.delete(`projects/${projectId}/members/${userId}`);
+      toast.success("Left project");
+      router.push("/dashboard");
+    } catch {
+      toast.error("Failed to leave project");
+    }
+  }, [projectId, userId, projectName]);
 
   const userName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
   const userAvatar = user?.imageUrl || "";
@@ -744,9 +756,12 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
           distributeVertically,
         }}
         projectId={projectId}
+        projectName={projectName}
         members={members.length > 0 ? members : undefined}
         onRoleChange={handleRoleChange}
         onRemoveMember={handleRemoveMember}
+        currentUserId={userId}
+        onLeaveProject={handleLeaveProject}
       />
 
       <LeftSidebar
@@ -825,7 +840,6 @@ function Editor({ projectId, pageId, role, canEdit }: EditorProps) {
         canEdit={canEdit}
       />
 
-      {role === "owner" && <AccessRequestBanner projectId={projectId} />}
     </div>
   );
 }

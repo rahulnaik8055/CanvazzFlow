@@ -21,7 +21,9 @@ export default function NavBar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-[10px] font-bold text-white tracking-tight">
             CF
           </div>
-          <span className="text-base font-semibold text-gray-900">CanvasFlow</span>
+          <span className="text-base font-semibold text-gray-900">
+            Canvazz Flow
+          </span>
         </a>
 
         <nav className="hidden md:flex items-center gap-8">
@@ -43,7 +45,10 @@ export default function NavBar() {
             </Button>
           </SignInButton>
           <SignUpButton mode="modal" fallbackRedirectUrl="/sync">
-            <Button size="sm" className="text-sm bg-gray-900 text-white hover:bg-gray-800">
+            <Button
+              size="sm"
+              className="text-sm bg-gray-900 text-white hover:bg-gray-800"
+            >
               Get Started Free
             </Button>
           </SignUpButton>
@@ -77,7 +82,10 @@ export default function NavBar() {
               </Button>
             </SignInButton>
             <SignUpButton mode="modal" fallbackRedirectUrl="/sync">
-              <Button size="sm" className="w-full bg-gray-900 text-white hover:bg-gray-800">
+              <Button
+                size="sm"
+                className="w-full bg-gray-900 text-white hover:bg-gray-800"
+              >
                 Get Started Free
               </Button>
             </SignUpButton>

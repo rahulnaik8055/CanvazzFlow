@@ -31,7 +31,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
   const [favorites, setFavorites] = useState(getFavorites);
   const [inviteProjectId, setInviteProjectId] = useState<string | null>(null);
 
-  const handleInvite = useCallback((project: DashboardProject) => {
+  const handleInvite = useCallback((project: { id: string }) => {
     setInviteProjectId(project.id);
   }, []);
 

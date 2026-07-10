@@ -475,6 +475,7 @@ export function ProfileView({ userId }: ProfileViewProps) {
               projectId={requestProject.id}
               projectName={requestProject.name}
               currentUserId={currentUserId}
+              onApproved={() => setRequestProject(null)}
             />
             <button
               onClick={() => setRequestProject(null)}

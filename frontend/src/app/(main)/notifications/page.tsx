@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, CheckCheck, Trash2, Bell, Inbox, ArrowLeft } from "lucide-react";
+import { Search, CheckCheck, Trash2, Inbox, ArrowLeft } from "lucide-react";
 import { useNotifications, Notification } from "@/hooks/useNotifications";
 import { useDebounce } from "@/hooks/useDebounce";
 import { timeAgo } from "@/lib/notificationUtils";
@@ -150,12 +150,6 @@ export default function NotificationsPage() {
               }`}
               onClick={() => {
                 if (!n.read) markAsRead(n.id);
-                const accessTypes = ["access_request", "access_request_approved", "access_request_denied", "project_invitation", "invitation_accepted", "invitation_declined"];
-                if (accessTypes.includes(n.type)) {
-                  router.push("/access");
-                } else if (n.projectId) {
-                  router.push(`/project/${n.projectId}/pages`);
-                }
               }}
             >
               <div className="shrink-0 mt-1">
@@ -180,11 +174,6 @@ export default function NotificationsPage() {
                 )}
                 <div className="flex items-center gap-2 mt-1.5">
                   <span className="text-[10px] text-gray-400">{timeAgo(n.createdAt)}</span>
-                  {n.projectId && (
-                    <span className="text-[10px] text-blue-500 font-medium">
-                      {["access_request", "access_request_approved", "access_request_denied", "project_invitation", "invitation_accepted", "invitation_declined"].includes(n.type) ? "View in Access Center" : "View project"}
-                    </span>
-                  )}
                 </div>
               </div>
 

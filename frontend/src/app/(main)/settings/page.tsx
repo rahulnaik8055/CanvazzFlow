@@ -18,14 +18,12 @@ function getInitials(firstName?: string | null, lastName?: string | null): strin
 
 export default function SettingsPage() {
   const { profile, loading, updateProfile } = useProfile();
-  const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     if (profile) {
-      setDisplayName(profile.displayName || "");
       setBio(profile.bio || "");
     }
   }, [profile]);
@@ -33,7 +31,7 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
-      await updateProfile({ displayName: displayName || undefined, bio: bio || undefined });
+      await updateProfile({ bio: bio || undefined });
       toast.success("Profile updated");
       setDirty(false);
     } catch (err: any) {
@@ -99,22 +97,6 @@ export default function SettingsPage() {
               </p>
               <p className="text-xs text-gray-400">Avatar is managed by your account provider</p>
             </div>
-          </div>
-
-          {/* Display Name */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 mb-1.5 flex items-center gap-1.5">
-              <User size={12} />
-              Display Name
-            </label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => { setDisplayName(e.target.value); setDirty(true); }}
-              placeholder="Your display name"
-              maxLength={50}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent bg-white"
-            />
           </div>
 
           {/* Bio */}

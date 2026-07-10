@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search, FolderOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "@/hooks/useDebounce";
 import { ProjectCard } from "./ProjectCard";
+import { InviteDialog } from "@/components/invitations/InviteDialog";
 import type { DashboardProject } from "@/hooks/useDashboard";
 
 function getFavorites(): Set<string> {
@@ -28,6 +29,11 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
   const [showFavorites, setShowFavorites] = useState(false);
   const debouncedSearch = useDebounce(search);
   const [favorites, setFavorites] = useState(getFavorites);
+  const [inviteProjectId, setInviteProjectId] = useState<string | null>(null);
+
+  const handleInvite = useCallback((project: DashboardProject) => {
+    setInviteProjectId(project.id);
+  }, []);
 
   const filtered = projects.filter((p) => {
     const matchesSearch = !debouncedSearch ||
@@ -99,10 +105,17 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
               key={project.id}
               project={project}
               onClick={() => router.push(`/project/${project.id}/pages`)}
+              onInvite={handleInvite}
             />
           ))}
         </div>
       )}
+
+      <InviteDialog
+        open={inviteProjectId !== null}
+        onOpenChange={(open) => { if (!open) setInviteProjectId(null); }}
+        projectId={inviteProjectId ?? ""}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import axios from "axios";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+console.log("BASE_URL:", BASE_URL);
 
 const httpClient = axios.create({
   baseURL: BASE_URL,
@@ -31,7 +32,7 @@ httpClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default httpClient;

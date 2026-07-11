@@ -1,10 +1,5 @@
 
 
-https://github.com/user-attachments/assets/e00ad474-5b54-4787-8512-8e7888bdba28
-
-
-
-
 
 # CanvazzFlow
 
@@ -39,26 +34,7 @@ A real-time collaborative design canvas — multiple users editing the same boar
 
 ## Demo
 
-<!--
-  Drop your demo video here. A few options that render well on GitHub / GitLab:
-
-  1. Direct upload (GitHub only): drag the video file into a README edit box on GitHub.com —
-     it uploads to user-attachments and gives you a URL. Paste that URL on its own line, e.g.:
-
-     https://github.com/user-attachments/assets/your-video-id
-
-  2. Thumbnail linking to a hosted video (works everywhere, incl. this file):
-
-     [![CanvasFlow demo](docs/demo-thumbnail.png)](https://youtu.be/your-video-id)
-
-  3. GIF preview inline (autoplays, no click needed):
-
-     ![CanvasFlow demo](docs/demo.gif)
--->
-
-[![CanvasFlow demo](docs/demo-thumbnail.png)](https://youtu.be/REPLACE-WITH-VIDEO-ID)
-
-*Click the thumbnail above to watch a full walkthrough — real-time editing, layers, and access control in action.*
+https://github.com/user-attachments/assets/78d1b036-f6f5-41ca-bda3-30fe8a04db5c
 
 ---
 

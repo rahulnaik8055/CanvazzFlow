@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Globe, Lock, Check, X, Trash2, Shield, Users, Archive, ChevronDown, UserCog, UserPlus, LogOut } from "lucide-react";
 import { EmptyState } from "@/components/custom/EmptyState";
 import { InviteDialog } from "@/components/invitations/InviteDialog";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
 const VISIBILITY_OPTIONS = [
   { value: "public", label: "Public", desc: "Anyone can find and request access" },
@@ -40,6 +41,8 @@ export default function SettingsPage() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const { user } = useUser();
 
   const fetchSettings = useCallback(async () => {
@@ -136,8 +139,6 @@ export default function SettingsPage() {
   };
 
   const handleDeleteProject = async () => {
-    if (!window.confirm("Delete this project permanently? All data will be lost.")) return;
-    if (!window.confirm("Are you absolutely sure? This cannot be undone.")) return;
     try {
       await apiRef.current.delete(`project/${projectId}`);
       toast.success("Project deleted");
@@ -148,7 +149,6 @@ export default function SettingsPage() {
   };
 
   const handleLeaveProject = async () => {
-    if (!window.confirm("Leave this project? You will lose access to all its content.")) return;
     if (!user?.id) return;
     try {
       await apiRef.current.delete(`projects/${projectId}/members/${user.id}`);
@@ -434,7 +434,7 @@ export default function SettingsPage() {
                   <div className="text-xs text-red-400">Permanently delete this project and all its data</div>
                 </div>
                 <button
-                  onClick={handleDeleteProject}
+                  onClick={() => setDeleteConfirmOpen(true)}
                   className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -451,7 +451,7 @@ export default function SettingsPage() {
                 <div className="text-xs text-red-400">Remove yourself from this project</div>
               </div>
               <button
-                onClick={handleLeaveProject}
+                onClick={() => setLeaveConfirmOpen(true)}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
@@ -461,6 +461,26 @@ export default function SettingsPage() {
           )}
         </div>
       </section>
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Project"
+        description="Delete this project permanently? All data will be lost. This cannot be undone."
+        confirmLabel="Delete Project"
+        variant="danger"
+        onConfirm={handleDeleteProject}
+      />
+
+      <ConfirmDialog
+        open={leaveConfirmOpen}
+        onOpenChange={setLeaveConfirmOpen}
+        title="Leave Project"
+        description="Leave this project? You will lose access to all its content."
+        confirmLabel="Leave Project"
+        variant="warning"
+        onConfirm={handleLeaveProject}
+      />
+
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} projectId={projectId} />
     </div>
   );

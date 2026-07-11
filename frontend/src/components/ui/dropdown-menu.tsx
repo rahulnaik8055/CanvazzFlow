@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 interface Item {
   label: string;
@@ -18,26 +19,68 @@ interface DropdownMenuProps {
 
 export function DropdownMenu({ trigger, items, align = "end" }: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const panelWidth = 160;
+    const panelHeight = items.length * 32 + 8;
+
+    let top = rect.bottom + 4;
+    let left = align === "end" ? rect.right - panelWidth : rect.left;
+
+    if (top + panelHeight > window.innerHeight) {
+      top = rect.top - panelHeight - 4;
+    }
+    if (left + panelWidth > window.innerWidth) {
+      left = window.innerWidth - panelWidth - 8;
+    }
+    if (left < 0) left = 8;
+
+    setPos({ top, left });
+  }, [align, items.length]);
 
   useEffect(() => {
+    if (open) updatePosition();
+  }, [open, updatePosition]);
+
+  useEffect(() => {
+    if (!open) return;
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node)
+      ) {
         setOpen(false);
       }
     }
+    function handleScroll() {
+      setOpen(false);
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("scroll", handleScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [open]);
 
   return (
-    <div ref={ref} className="relative inline-block">
-      <div onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>
+    <>
+      <div
+        ref={triggerRef}
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+      >
         {trigger}
       </div>
-      {open && (
+      {open && createPortal(
         <div
-          className={`absolute top-full mt-1 z-50 min-w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 ${align === "end" ? "right-0" : "left-0"}`}
+          ref={panelRef}
+          className="fixed z-[200] min-w-[140px] bg-white rounded-lg shadow-lg border border-gray-200 py-1"
+          style={{ top: pos.top, left: pos.left }}
           onClick={(e) => e.stopPropagation()}
         >
           {items.map((item, i) => (
@@ -60,8 +103,9 @@ export function DropdownMenu({ trigger, items, align = "end" }: DropdownMenuProp
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 }

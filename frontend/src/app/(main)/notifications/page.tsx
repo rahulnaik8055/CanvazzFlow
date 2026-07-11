@@ -54,11 +54,13 @@ export default function NotificationsPage() {
   const handleMarkAllRead = async () => {
     await markAllAsRead();
     toast.success("All notifications marked as read");
+    refresh();
   };
 
   const handleDelete = async (n: Notification) => {
     await deleteNotification(n.id);
     toast.success("Notification deleted");
+    refresh();
   };
 
   return (
@@ -149,7 +151,10 @@ export default function NotificationsPage() {
                 !n.read ? "bg-blue-50/20 border-blue-100/50" : ""
               }`}
               onClick={() => {
-                if (!n.read) markAsRead(n.id);
+                if (!n.read) {
+                  markAsRead(n.id);
+                  refresh();
+                }
               }}
             >
               <div className="shrink-0 mt-1">

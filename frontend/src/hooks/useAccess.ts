@@ -23,18 +23,90 @@ export interface AccessItem {
   createdAt: string;
 }
 
-export function useAccess() {
+type Tab = "incoming" | "outgoing" | "history";
+
+export function useAccess(activeTab?: Tab) {
   const api = useApi();
   const socket = useSocket();
   const [incoming, setIncoming] = useState<AccessItem[]>([]);
   const [outgoing, setOutgoing] = useState<AccessItem[]>([]);
   const [history, setHistory] = useState<AccessItem[]>([]);
   const [badgeCount, setBadgeCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fetchedRef = useRef(false);
+  const fetchedTabsRef = useRef<Set<Tab>>(new Set());
+  const fetchedCountRef = useRef(false);
 
-  const fetchAll = useCallback(async () => {
+  const fetchBadgeCount = useCallback(async () => {
+    if (fetchedCountRef.current) return;
+    fetchedCountRef.current = true;
+    try {
+      const count = await api.get("access/count");
+      setBadgeCount(count.count);
+    } catch {
+      // ignore
+    }
+  }, [api]);
+
+  const fetchIncoming = useCallback(async () => {
+    if (fetchedTabsRef.current.has("incoming")) return;
+    fetchedTabsRef.current.add("incoming");
+    setLoading(true);
+    try {
+      const inc = await api.get("access/incoming");
+      setIncoming(inc);
+      setError(null);
+    } catch {
+      setError("Failed to load incoming data");
+    } finally {
+      setLoading(false);
+    }
+  }, [api]);
+
+  const fetchOutgoing = useCallback(async () => {
+    if (fetchedTabsRef.current.has("outgoing")) return;
+    fetchedTabsRef.current.add("outgoing");
+    setLoading(true);
+    try {
+      const out = await api.get("access/outgoing");
+      setOutgoing(out);
+      setError(null);
+    } catch {
+      setError("Failed to load outgoing data");
+    } finally {
+      setLoading(false);
+    }
+  }, [api]);
+
+  const fetchHistory = useCallback(async () => {
+    if (fetchedTabsRef.current.has("history")) return;
+    fetchedTabsRef.current.add("history");
+    setLoading(true);
+    try {
+      const hist = await api.get("access/history");
+      setHistory(hist);
+      setError(null);
+    } catch {
+      setError("Failed to load history");
+    } finally {
+      setLoading(false);
+    }
+  }, [api]);
+
+  useEffect(() => {
+    fetchBadgeCount();
+  }, [fetchBadgeCount]);
+
+  useEffect(() => {
+    if (!activeTab) return;
+    if (activeTab === "incoming") fetchIncoming();
+    else if (activeTab === "outgoing") fetchOutgoing();
+    else if (activeTab === "history") fetchHistory();
+  }, [activeTab, fetchIncoming, fetchOutgoing, fetchHistory]);
+
+  const refreshAll = useCallback(async () => {
+    fetchedTabsRef.current.clear();
+    fetchedCountRef.current = false;
     setLoading(true);
     try {
       const [inc, out, hist, count] = await Promise.all([
@@ -47,6 +119,10 @@ export function useAccess() {
       setOutgoing(out);
       setHistory(hist);
       setBadgeCount(count.count);
+      fetchedTabsRef.current.add("incoming");
+      fetchedTabsRef.current.add("outgoing");
+      fetchedTabsRef.current.add("history");
+      fetchedCountRef.current = true;
       setError(null);
     } catch {
       setError("Failed to load access data");
@@ -55,47 +131,57 @@ export function useAccess() {
     }
   }, [api]);
 
-  useEffect(() => {
-    if (fetchedRef.current) return;
-    fetchedRef.current = true;
-    fetchAll();
-  }, [fetchAll]);
+  const refreshTab = useCallback(async (tab: Tab) => {
+    fetchedTabsRef.current.delete(tab);
+    if (tab === "incoming") {
+      fetchedTabsRef.current.delete("incoming");
+      await fetchIncoming();
+    } else if (tab === "outgoing") {
+      fetchedTabsRef.current.delete("outgoing");
+      await fetchOutgoing();
+    } else if (tab === "history") {
+      fetchedTabsRef.current.delete("history");
+      await fetchHistory();
+    }
+    fetchedCountRef.current = false;
+    fetchBadgeCount();
+  }, [fetchIncoming, fetchOutgoing, fetchHistory, fetchBadgeCount]);
 
   const acceptInvitation = useCallback(async (token: string) => {
     const res = await api.post(`invitations/${token}/accept`, {});
-    await fetchAll();
+    await refreshTab("incoming");
     return res;
-  }, [api, fetchAll]);
+  }, [api, refreshTab]);
 
   const declineInvitation = useCallback(async (token: string) => {
     const res = await api.post(`invitations/${token}/decline`, {});
-    await fetchAll();
+    await refreshTab("incoming");
     return res;
-  }, [api, fetchAll]);
+  }, [api, refreshTab]);
 
   const cancelInvitation = useCallback(async (id: string) => {
     const res = await api.post(`invitations/${id}/cancel`, {});
-    await fetchAll();
+    await refreshTab("outgoing");
     return res;
-  }, [api, fetchAll]);
+  }, [api, refreshTab]);
 
   const resendInvitation = useCallback(async (id: string) => {
     const res = await api.post(`invitations/${id}/resend`, {});
-    await fetchAll();
+    await refreshTab("outgoing");
     return res;
-  }, [api, fetchAll]);
+  }, [api, refreshTab]);
 
   const approveRequest = useCallback(async (id: string) => {
     const res = await api.patch(`access-requests/${id}/respond`, { approved: true });
-    await fetchAll();
+    await refreshTab("incoming");
     return res;
-  }, [api, fetchAll]);
+  }, [api, refreshTab]);
 
   const rejectRequest = useCallback(async (id: string) => {
     const res = await api.patch(`access-requests/${id}/respond`, { approved: false });
-    await fetchAll();
+    await refreshTab("incoming");
     return res;
-  }, [api, fetchAll]);
+  }, [api, refreshTab]);
 
   return {
     incoming,
@@ -104,7 +190,7 @@ export function useAccess() {
     badgeCount,
     loading,
     error,
-    refresh: fetchAll,
+    refresh: refreshAll,
     acceptInvitation,
     declineInvitation,
     cancelInvitation,

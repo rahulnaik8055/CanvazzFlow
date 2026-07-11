@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion } from "motion/react";
 import { Check, X, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -30,6 +30,10 @@ export function PendingRequests({ requests, onRespond }: PendingRequestsProps) {
   const apiRef = useRef(useApi());
   const [local, setLocal] = useState(requests);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocal(requests);
+  }, [requests]);
 
   const handleApprove = useCallback(async (id: string) => {
     setActionLoading(id);

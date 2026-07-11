@@ -20,6 +20,7 @@ import { EmptyState } from "@/components/custom/EmptyState";
 import { ProjectCard, IProject } from "@/components/project/ProjectCard";
 import { ProjectModal } from "@/components/project/ProjectModal";
 import { InviteDialog } from "@/components/invitations/InviteDialog";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useDebounce } from "@/hooks/useDebounce";
 
 const LIMIT = 12;
@@ -54,6 +55,8 @@ export default function ProjectsPage() {
   const [renameTarget, setRenameTarget] = useState<IProject | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [inviteProjectId, setInviteProjectId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<IProject | null>(null);
+  const [leaveTarget, setLeaveTarget] = useState<IProject | null>(null);
   const { user } = useUser();
   const debouncedSearch = useDebounce(search, 300);
 
@@ -139,15 +142,20 @@ export default function ProjectsPage() {
   }, [renameTarget, renameValue, fetchProjects]);
 
   const handleDelete = useCallback(async (project: IProject) => {
-    if (!window.confirm(`Delete "${project.name}"? This cannot be undone.`)) return;
+    setDeleteTarget(project);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!deleteTarget) return;
     try {
-      await apiRef.current.delete(`project/${project.id}`);
+      await apiRef.current.delete(`project/${deleteTarget.id}`);
       toast.success("Project deleted");
+      setDeleteTarget(null);
       fetchProjects();
     } catch {
       toast.error("Failed to delete project");
     }
-  }, [fetchProjects]);
+  }, [deleteTarget, fetchProjects]);
 
   const handleSettings = useCallback((project: IProject) => {
     router.push(`/project/${project.id}/settings`);
@@ -158,16 +166,20 @@ export default function ProjectsPage() {
   }, []);
 
   const handleLeave = useCallback(async (project: IProject) => {
-    if (!window.confirm(`Leave "${project.name}"? You will lose access to all its content.`)) return;
-    if (!user?.id) return;
+    setLeaveTarget(project);
+  }, []);
+
+  const handleLeaveConfirm = useCallback(async () => {
+    if (!leaveTarget || !user?.id) return;
     try {
-      await apiRef.current.delete(`projects/${project.id}/members/${user.id}`);
+      await apiRef.current.delete(`projects/${leaveTarget.id}/members/${user.id}`);
       toast.success("Left project");
+      setLeaveTarget(null);
       fetchProjects();
     } catch {
       toast.error("Failed to leave project");
     }
-  }, [user?.id, fetchProjects]);
+  }, [leaveTarget, user?.id, fetchProjects]);
 
   const handleDuplicate = useCallback(async (project: IProject) => {
     try {
@@ -331,6 +343,26 @@ export default function ProjectsPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleCreate}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete Project"
+        description={`Delete "${deleteTarget?.name}"? This will permanently remove the project and all its data. This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+      />
+
+      <ConfirmDialog
+        open={leaveTarget !== null}
+        onOpenChange={(open) => { if (!open) setLeaveTarget(null); }}
+        title="Leave Project"
+        description={`Leave "${leaveTarget?.name}"? You will lose access to all its content.`}
+        confirmLabel="Leave"
+        variant="warning"
+        onConfirm={handleLeaveConfirm}
       />
 
       {renameTarget && (

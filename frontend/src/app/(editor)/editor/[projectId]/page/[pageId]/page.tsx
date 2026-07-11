@@ -21,6 +21,7 @@ import { LiveMap } from "@liveblocks/client";
 
 import LoadingOverlay from "@/components/LoadingOverlay";
 import { Node } from "@/types/CanvasTypes";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useCanvasHistory } from "@/hooks/useCanvasHistory";
 import { useShapeActions } from "@/hooks/useShapeActions";
 import { useCanvasInteractions } from "@/hooks/useCanvasInteractions";
@@ -211,6 +212,7 @@ function Editor({ projectId, pageId, role, canEdit, projectName, userId }: Edito
   const api = useApi();
 
   const [members, setMembers] = useState<Array<{ id: string; firstName: string | null; lastName: string | null; email: string; imageUrl: string | null; role: string }>>([]);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
 
   useEffect(() => {
     api.get(`projects/${projectId}/members`).then((data: any[]) => {
@@ -240,16 +242,20 @@ function Editor({ projectId, pageId, role, canEdit, projectName, userId }: Edito
   }, [projectId]);
 
   const handleLeaveProject = useCallback(async () => {
-    if (!window.confirm(`Leave "${projectName}"? You will lose access to all its content.`)) return;
+    setLeaveConfirmOpen(true);
+  }, []);
+
+  const handleLeaveProjectConfirm = useCallback(async () => {
     if (!userId) return;
     try {
       await api.delete(`projects/${projectId}/members/${userId}`);
       toast.success("Left project");
+      setLeaveConfirmOpen(false);
       router.push("/dashboard");
     } catch {
       toast.error("Failed to leave project");
     }
-  }, [projectId, userId, projectName]);
+  }, [projectId, userId]);
 
   const userName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "User";
   const userAvatar = user?.imageUrl || "";
@@ -838,6 +844,16 @@ function Editor({ projectId, pageId, role, canEdit, projectName, userId }: Edito
         toggleLock={() => toggleLock(selectedIds)}
         toggleVisibility={() => toggleVisibility(selectedIds)}
         canEdit={canEdit}
+      />
+
+      <ConfirmDialog
+        open={leaveConfirmOpen}
+        onOpenChange={setLeaveConfirmOpen}
+        title="Leave Project"
+        description={`Leave "${projectName}"? You will lose access to all its content.`}
+        confirmLabel="Leave Project"
+        variant="warning"
+        onConfirm={handleLeaveProjectConfirm}
       />
 
     </div>

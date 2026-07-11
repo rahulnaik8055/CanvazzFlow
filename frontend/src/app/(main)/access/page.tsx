@@ -25,6 +25,11 @@ const STATUS_FILTERS = [
 
 export default function AccessPage() {
   const router = useRouter();
+  const [tab, setTab] = useState<"incoming" | "outgoing" | "history">("incoming");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
+
   const {
     incoming,
     outgoing,
@@ -38,12 +43,7 @@ export default function AccessPage() {
     resendInvitation,
     approveRequest,
     rejectRequest,
-  } = useAccess();
-
-  const [tab, setTab] = useState("incoming");
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const debouncedSearch = useDebounce(search, 300);
+  } = useAccess(tab);
 
   const handleAccept = async (item: AccessItem) => {
     if (item.token) {
@@ -168,7 +168,7 @@ export default function AccessPage() {
         {TABS.map((t) => (
           <button
             key={t.value}
-            onClick={() => setTab(t.value)}
+            onClick={() => setTab(t.value as "incoming" | "outgoing" | "history")}
             className={`px-4 py-1.5 text-xs font-medium rounded-lg transition-colors ${
               tab === t.value
                 ? "bg-gray-900 text-white"

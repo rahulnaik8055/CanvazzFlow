@@ -20,7 +20,7 @@ export default function SyncPage() {
     const createUser = async () => {
       try {
         await api.post("users/sync", {});
-        router.replace("/project");
+        router.replace("/dashboard");
       } catch (err) {
         console.error(err);
         toast.error("Failed to sync account. Please try refreshing.");

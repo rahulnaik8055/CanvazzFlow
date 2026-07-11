@@ -16,8 +16,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Design Tool",
+  title: "CanvazzFlow",
   description: "Your design tool",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({

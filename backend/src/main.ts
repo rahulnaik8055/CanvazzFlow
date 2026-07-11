@@ -8,8 +8,8 @@ import * as cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = new DocumentBuilder()
-    .setTitle('Design Tool API')
-    .setDescription('API documentation for the Design Tool application')
+    .setTitle('Canvazz Flow API')
+    .setDescription('API documentation for the Canvazz Flow application')
     .setVersion('1.0')
     .build();
 
